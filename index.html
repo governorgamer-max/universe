@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Universe🌻</title>
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- OrbitControls -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@300;500;700&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-deep: #020005;
+        --primary: #ff69b4;
+        --sunflower: #ffd700;
+        --glass: rgba(255, 255, 255, 0.05); 
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --fire: #ff4500;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        overflow: hidden;
+        background-color: var(--bg-deep);
+        font-family: 'Montserrat', sans-serif;
+        color: white;
+    }
+
+    /* 3D CANVAS */
+    #canvas-container {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 1;
+        background: radial-gradient(circle at center, #10051a 0%, #000000 100%);
+    }
+
+    /* FLASH OVERLAY */
+    #flash-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle, rgba(255,105,180,0.6) 0%, transparent 70%);
+        opacity: 0; pointer-events: none; z-index: 900;
+        transition: opacity 0.5s;
+    }
+
+    /* --- STREAK OVERLAY UI --- */
+    #streak-overlay {
+        position: fixed; top: 15%; width: 100%; text-align: center;
+        z-index: 500; 
+        display: none; 
+        opacity: 0;
+        /* FIX: Container passes clicks through so you can rotate scene */
+        pointer-events: none; 
+    }
+    .streak-badge {
+        display: inline-flex; align-items: center; gap: 15px;
+        background: rgba(0,0,0,0.6); border: 2px solid var(--primary);
+        padding: 15px 40px; border-radius: 50px;
+        box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);
+        backdrop-filter: blur(10px);
+        pointer-events: auto; /* Badge is interactable */
+    }
+    .streak-count { font-size: 3rem; font-weight: 800; color: #fff; font-family: 'Montserrat'; }
+    .streak-fire { font-size: 2.5rem; color: var(--fire); animation: flame 1.5s infinite alternate; }
+    .streak-sub { font-size: 1.2rem; color: #ddd; margin-top: 10px; letter-spacing: 2px; text-transform: uppercase; }
+    
+    @keyframes flame { from { transform: scale(1); filter: drop-shadow(0 0 5px orange); } to { transform: scale(1.2); filter: drop-shadow(0 0 20px red); } }
+
+    .back-btn {
+        margin-top: 20px; 
+        /* FIX: Button captures clicks */
+        pointer-events: auto; 
+        cursor: pointer;
+        padding: 10px 30px; background: white; color: black; border-radius: 30px;
+        font-weight: bold; border: none; transition: 0.3s;
+    }
+    .back-btn:hover { transform: scale(1.1); background: var(--primary); color: white; }
+
+    /* ENTRANCE SCREEN */
+    .entrance-screen {
+        position: absolute; width: 100%; height: 100%;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        background: #000; z-index: 1000; /* High Z-index */
+        pointer-events: auto; /* Must block everything initially */
+    }
+    
+    .title-main {
+        font-family: 'Dancing Script', cursive;
+        font-size: 5rem;
+        background: linear-gradient(to right, #ffd700, #ff69b4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 20px;
+        filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.6));
+        text-align: center;
+    }
+
+    .enter-btn {
+        padding: 15px 50px;
+        border: 1px solid var(--sunflower);
+        border-radius: 50px;
+        background: rgba(255, 215, 0, 0.1);
+        color: var(--sunflower);
+        font-family: 'Montserrat', sans-serif;
+        font-weight: bold;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: 0.4s;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+    .enter-btn:hover { 
+        background: var(--sunflower); 
+        color: black; 
+        box-shadow: 0 0 50px var(--sunflower); 
+        transform: scale(1.1); 
+    }
+
+    /* --- UI LAYER --- */
+    #ui-layer {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 10;
+        display: flex; justify-content: center; align-items: center;
+        /* FIX: The Full Screen Container MUST NOT block clicks */
+        pointer-events: none; 
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    /* DASHBOARD */
+    .dashboard {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+        width: 85%; max-width: 900px;
+        transform: translateY(30px);
+    }
+
+    .holo-card {
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        padding: 30px 20px;
+        border-radius: 20px;
+        text-align: center;
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        /* FIX: Cards MUST capture clicks */
+        pointer-events: auto; 
+        cursor: pointer;
+        position: relative; overflow: hidden;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .holo-card:hover { 
+        transform: translateY(-10px) scale(1.02); 
+        border-color: rgba(255, 105, 180, 0.5);
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 40px rgba(255, 105, 180, 0.3); 
+    }
+    
+    .card-icon { font-size: 2.2rem; margin-bottom: 15px; color: var(--primary); transition: 0.3s; }
+    .holo-card:hover .card-icon { color: var(--sunflower); transform: rotate(10deg) scale(1.1); }
+    .card-title { font-family: 'Playfair Display'; font-size: 1.4rem; margin-bottom: 8px; color: #fff; }
+    .card-desc { font-size: 0.85rem; color: #aaa; font-weight: 300; }
+    
+    .timeline-text { font-size: 0.9rem; color: var(--sunflower); margin-top: 5px; font-weight: bold; text-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
+
+    .view-toggle {
+        position: fixed; bottom: 30px; right: 30px;
+        z-index: 50; width: 45px; height: 45px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 50%;
+        color: white; display: flex; justify-content: center; align-items: center;
+        cursor: pointer; transition: 0.3s;
+        backdrop-filter: blur(5px);
+        /* FIX: Toggle button must be clickable */
+        pointer-events: auto; 
+    }
+    .view-toggle:hover { background: var(--primary); transform: rotate(90deg); box-shadow: 0 0 15px var(--primary); }
+
+    /* --- MODAL --- */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 200;
+        display: flex; justify-content: center; align-items: center;
+        opacity: 0; 
+        /* FIX: Start with pointer-events none so it doesn't block */
+        pointer-events: none; 
+        backdrop-filter: blur(15px);
+    }
+    
+    .modal-content {
+        width: 90%; max-width: 500px;
+        background: rgba(20, 10, 30, 0.95);
+        border: 1px solid var(--primary);
+        border-radius: 20px;
+        padding: 40px;
+        position: relative;
+        text-align: center;
+        box-shadow: 0 0 60px rgba(255, 105, 180, 0.2);
+        /* Content inside modal blocks clicks */
+        pointer-events: auto; 
+    }
+    
+    .close-btn {
+        position: absolute; top: 20px; right: 25px;
+        font-size: 24px; color: #666; cursor: pointer; pointer-events: auto; transition: 0.3s;
+    }
+    .close-btn:hover { color: var(--primary); transform: rotate(90deg); }
+
+    .gallery-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        gap: 15px; margin-top: 20px; max-height: 50vh; overflow-y: auto;
+    }
+    .gallery-item {
+        width: 100%; height: 150px; object-fit: cover;
+        border-radius: 10px; transition: 0.3s; opacity: 0.8;
+    }
+    .gallery-item:hover { opacity: 1; transform: scale(1.05); box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3); }
+
+    @media (max-width: 768px) {
+        .dashboard { grid-template-columns: 1fr; width: 85%; gap: 15px; }
+        .holo-card { padding: 20px; display: flex; align-items: center; text-align: left; }
+        .card-icon { margin-bottom: 0; margin-right: 20px; font-size: 1.8rem; }
+        .title-main { font-size: 3.5rem; }
+    }
+</style>
+</head>
+<body>
+
+<!-- AUDIO -->
+<!-- ⚠️ REPLACE SRC with her favorite song link. For local files, use src="songname.mp3" -->
+<audio id="bg-music" loop>
+    <source src="song.mp3" type="audio/mp3">
+</audio>
+
+<div id="flash-overlay"></div>
+<div id="canvas-container"></div>
+
+<!-- STREAK DISPLAY (Hidden by default) -->
+<div id="streak-overlay">
+    <div class="streak-badge">
+        <i class="fa-solid fa-fire streak-fire"></i>
+        <span class="streak-count" id="streak-number">0</span>
+    </div>
+    <div class="streak-sub">Days Growing Together PS: Iloveyou </div>
+    <button class="back-btn" onclick="closeStreakMode()">Return to Base</button>
+</div>
+
+<!-- HIDE UI BTN -->
+<div class="view-toggle" onclick="toggleUI()" title="Toggle View">
+    <i class="fa-solid fa-eye"></i>
+</div>
+
+<!-- ENTRANCE -->
+<div class="entrance-screen" id="intro">
+    <h1 class="title-main">For my lovely pinkitel.</h1>
+    <p style="color: #aaa; margin-bottom: 40px; letter-spacing: 1px;">A world built just for you 🌻</p>
+    <button class="enter-btn" onclick="startJourney()">ENTER UNIVERSE</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="ui-layer">
+    <div class="dashboard" id="dashboard">
+        
+        <div class="holo-card" onclick="openModal('daily')">
+            <div class="card-icon"><i class="fa-solid fa-heart"></i></div>
+            <div>
+                <div class="card-title">Love Note</div>
+                <div class="card-desc">Open me  <p> </p> PS: Ulit ulitin mo </div>
+            </div>
+        </div>
+
+        <div class="holo-card" onclick="openModal('gallery')">
+            <div class="card-icon"><i class="fa-solid fa-camera-retro"></i></div>
+            <div>
+                <div class="card-title">Pinkitel</div>
+                <div class="card-desc">Collections</div>
+            </div>
+        </div>
+
+        <div class="holo-card" onclick="openModal('letter')">
+            <div class="card-icon"><i class="fa-solid fa-envelope-open"></i></div>
+            <div>
+                <div class="card-title">The Vow</div>
+                <div class="card-desc">My message</div>
+            </div>
+        </div>
+
+        <div class="holo-card" onclick="toggleMusic()">
+            <div class="card-icon" id="music-icon"><i class="fa-solid fa-play"></i></div>
+            <div>
+                <div class="card-title">Favourite Song</div>
+                <div class="card-desc" id="music-text">Click to Play</div>
+            </div>
+        </div>
+
+        <!-- CLICKABLE STREAK CARD -->
+        <div class="holo-card" onclick="openStreakMode()">
+            <div class="card-icon"><i class="fa-solid fa-fire"></i></div>
+            <div>
+                <div class="card-title">Our Streak</div>
+                <div class="timeline-text" id="timer">Loading...</div>
+            </div>
+        </div>
+
+        <div class="holo-card" onclick="triggerSuperHug()">
+            <div class="card-icon"><i class="fa-solid fa-hands-holding-circle"></i></div>
+            <div>
+                <div class="card-title">Big Hug</div>
+                <div class="card-desc"> Click Me!  <p> Hug kita virtually </p> </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-overlay">
+    
+    <div class="modal-content" id="modal-daily" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3 style="font-family:'Dancing Script'; color:var(--primary); font-size:2.5rem; margin-bottom:15px;">My Thought</h3>
+        <hr style="border: 0; height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px;">
+        <p id="typewriter-text" style="font-size:1.1rem; line-height:1.6; color:#e0e0e0; min-height:60px;"></p>
+    </div>
+
+    <div class="modal-content" id="modal-gallery" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3 style="font-family:'Dancing Script'; color:var(--primary); font-size:2.5rem;">Pretty you</h3>
+        <div class="gallery-grid">
+            <!-- ⚠️ REPLACE IMAGES -->
+            <img src="p1.jpg" class="gallery-item">
+            <img src="p2.jpg" class="gallery-item">
+            <img src="p3.jpg" class="gallery-item">
+            <img src="p4.jpg" class="gallery-item">
+            <img src="p5.jpg" class="gallery-item">
+            <img src="p6.jpg" class="gallery-item">
+            <img src="p7.jpg" class="gallery-item">
+            <img src="p8.jpg" class="gallery-item">
+            <img src="p9.jpg" class="gallery-item">
+            <img src="p10.jpg" class="gallery-item">
+            <img src="p11.jpg" class="gallery-item">
+            <img src="p12.jpg" class="gallery-item">
+            <img src="p13.jpg" class="gallery-item">
+            <img src="p14.jpg" class="gallery-item">
+            <img src="p15.jpg" class="gallery-item">
+            <img src="p18.jpg" class="gallery-item">
+            <img src="p19.jpg" class="gallery-item">
+            <img src="p16.jpg" class="gallery-item">
+            <img src="p17.jpg" class="gallery-item">
+            <img src="p20.jpg" class="gallery-item">
+        </div>
+    </div>
+
+    <div class="modal-content" id="modal-letter" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3 style="font-family:'Dancing Script'; color:var(--primary); font-size:2.5rem;">My Promise</h3>
+        <div style="margin-top:20px; line-height:1.8; text-align:justify; color:#ddd; height: 250px; overflow-y: auto; padding-right: 10px;">
+            <p>To my lovey,</p>,</p><br>
+            <p>Look around, baby ano nakikita mo? Does it not feel na parang universe love? with the sunflower as the centre? Baby this is how I look at you po. And this is how I will remember you. You're beautiful as how the universe offers its beauty, and your heart is vast as the space equivalent to its constantly expanding. Everything around the world and the universe reminds me of you. Because you are not the world, you are a universe filled with the greatest sunflower and that you deserver every good. I love you!</p><br>
+            <p>The pink sunflower represents our time together. The more days we spend, the bigger and brighter it grows. Just like my love for you. Because you are the first person to make me feel this way, you are an angel in disguise, and I hope every pink sunflowers reminds you of me. Mwuapss. </p><br>
+            <p>I love you to the edge of this universe and back. And hopefully the distance between us will grow closer until I can hold you, and forever that will be. I love you very much.</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* ----------------------------------------------------------------
+       1. HELPER: PROCEDURAL TEXTURE GENERATOR
+    ---------------------------------------------------------------- */
+    function createGlowTexture(color) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64; canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(0.4, color); 
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    /* ----------------------------------------------------------------
+       2. THREE.JS SETUP
+    ---------------------------------------------------------------- */
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x020005, 0.0008);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
+    camera.position.set(0, 30, 400);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 100;
+    controls.maxDistance = 1500;
+
+    /* ----------------------------------------------------------------
+       3. THE YELLOW SUNFLOWER (Default)
+    ---------------------------------------------------------------- */
+    const sunflowerGroup = new THREE.Group();
+    sunflowerGroup.position.set(0, -20, -500); 
+    sunflowerGroup.rotation.x = 0.3; 
+    scene.add(sunflowerGroup);
+
+    // --- Yellow Flower Logic ---
+    const seedGeo = new THREE.SphereGeometry(2, 8, 8);
+    const seedMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff4500, emissiveIntensity: 0.8, roughness: 0.5 });
+    
+    // Create Seeds
+    function createSeeds(group, colorOuter, colorInner) {
+        const cnt = 500;
+        const phi = Math.PI * (3 - Math.sqrt(5));
+        for (let i = 0; i < cnt; i++) {
+            const y = 1 - (i / (cnt - 1)) * 2;
+            const radius = Math.sqrt(1 - y * y);
+            const theta = phi * i;
+            
+            // Disc distribution
+            const r = 70 * Math.sqrt(i/cnt);
+            const x = r * Math.cos(theta);
+            const z = r * Math.sin(theta);
+            
+            const seed = new THREE.Mesh(seedGeo, seedMat.clone());
+            seed.position.set(x, z, (Math.random()-0.5)*5); // Z is depth in this rotation
+            if(i<150) seed.material.emissive.setHex(colorInner); // Inner
+            else seed.material.emissive.setHex(colorOuter); // Outer
+            group.add(seed);
+        }
+    }
+    createSeeds(sunflowerGroup, 0xff4500, 0x8b0000);
+
+    // --- Petal Creator ---
+    const createPetalGeo = (w, l) => {
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        shape.bezierCurveTo(w, l/3, w, l*0.8, 0, l);
+        shape.bezierCurveTo(-w, l*0.8, -w, l/3, 0, 0);
+        return new THREE.ShapeGeometry(shape, 8);
+    };
+
+    const petalMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xffd700, emissive: 0xffa500, emissiveIntensity: 0.2, 
+        metalness: 0.1, roughness: 0.3, transparent: true, opacity: 0.9, side: THREE.DoubleSide
+    });
+
+    const petalLayers = [];
+    function addLayer(group, count, rad, len, wid, zOffset, col, mat) {
+        const geo = createPetalGeo(wid, len);
+        const layer = new THREE.Group();
+        for(let i=0; i<count; i++) {
+            const angle = (i/count)*Math.PI*2;
+            const mesh = new THREE.Mesh(geo, mat.clone());
+            mesh.material.color.setHex(col);
+            mesh.position.set(Math.cos(angle)*rad, Math.sin(angle)*rad, zOffset);
+            mesh.rotation.z = angle - Math.PI/2;
+            mesh.rotation.x = 0.4;
+            mesh.userData = { initialX: 0.4, offset: i, speed: Math.random()*0.5 + 0.5 };
+            layer.add(mesh);
+        }
+        group.add(layer);
+        return layer;
+    }
+
+    addLayer(sunflowerGroup, 20, 60, 110, 18, -5, 0xffcc00, petalMat).children.forEach(c => petalLayers.push(c));
+    addLayer(sunflowerGroup, 26, 70, 140, 22, -15, 0xffd700, petalMat).children.forEach(c => petalLayers.push(c));
+    addLayer(sunflowerGroup, 32, 80, 170, 25, -25, 0xffaa00, petalMat).children.forEach(c => petalLayers.push(c));
+
+    const sunLight = new THREE.PointLight(0xffaa00, 2, 800);
+    sunLight.position.set(0, 0, 50);
+    sunflowerGroup.add(sunLight);
+
+    /* ----------------------------------------------------------------
+       4. THE PINK STREAK SUNFLOWER (Hidden initially)
+    ---------------------------------------------------------------- */
+    const pinkFlowerGroup = new THREE.Group();
+    pinkFlowerGroup.position.set(0, -20, -500); 
+    pinkFlowerGroup.rotation.x = 0.3; 
+    pinkFlowerGroup.visible = false; // Hidden at start
+    scene.add(pinkFlowerGroup);
+
+    // Pink Seeds (Purple center)
+    const pinkSeedMat = new THREE.MeshStandardMaterial({ color: 0xff1493, emissive: 0x800080, emissiveIntensity: 1, roughness: 0.5 });
+    const pinkSeedGeo = new THREE.SphereGeometry(2, 8, 8);
+    // Reuse seeding logic roughly
+    for(let i=0; i<500; i++) {
+        const r = 70 * Math.sqrt(i/500);
+        const theta = i * 2.4; 
+        const s = new THREE.Mesh(pinkSeedGeo, pinkSeedMat);
+        s.position.set(r*Math.cos(theta), r*Math.sin(theta), (Math.random()-0.5)*5);
+        pinkFlowerGroup.add(s);
+    }
+
+    const pinkPetalMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xff69b4, emissive: 0xff1493, emissiveIntensity: 0.4, 
+        metalness: 0.1, roughness: 0.3, transparent: true, opacity: 0.95, side: THREE.DoubleSide
+    });
+
+    const pinkLayers = [];
+    // Pink Layers
+    const l1 = addLayer(pinkFlowerGroup, 20, 60, 110, 18, -5, 0xff69b4, pinkPetalMat); // Hot Pink
+    const l2 = addLayer(pinkFlowerGroup, 26, 70, 140, 22, -15, 0xffb6c1, pinkPetalMat); // Light Pink
+    const l3 = addLayer(pinkFlowerGroup, 32, 80, 170, 25, -25, 0xc71585, pinkPetalMat); // Deep Pink
+
+    // Add them to animation list
+    l1.children.forEach(c => pinkLayers.push(c));
+    l2.children.forEach(c => pinkLayers.push(c));
+    l3.children.forEach(c => pinkLayers.push(c));
+
+    const pinkLight = new THREE.PointLight(0xff1493, 3, 1000);
+    pinkLight.position.set(0, 0, 80);
+    pinkFlowerGroup.add(pinkLight);
+
+
+    /* ----------------------------------------------------------------
+       5. BACKGROUND (Nebula, Planets, Stars)
+    ---------------------------------------------------------------- */
+    const nebulaGroup = new THREE.Group();
+    scene.add(nebulaGroup);
+    const nebulaTexture = createGlowTexture('rgba(255,255,255,0.5)');
+    const nebulaGeo = new THREE.BufferGeometry();
+    const nebulaCount = 60;
+    const nebulaPos = new Float32Array(nebulaCount * 3);
+    const nebulaColors = new Float32Array(nebulaCount * 3);
+    for(let i=0; i<nebulaCount; i++) {
+        nebulaPos[i*3] = (Math.random()-0.5) * 1500;
+        nebulaPos[i*3+1] = (Math.random()-0.5) * 1000;
+        nebulaPos[i*3+2] = -500 - Math.random() * 1000;
+        const r = Math.random();
+        if(r > 0.6) { nebulaColors[i*3]=1; nebulaColors[i*3+1]=0.4; nebulaColors[i*3+2]=0.7; } 
+        else if(r > 0.3) { nebulaColors[i*3]=0.5; nebulaColors[i*3+1]=0; nebulaColors[i*3+2]=1; } 
+        else { nebulaColors[i*3]=0; nebulaColors[i*3+1]=0.5; nebulaColors[i*3+2]=1; } 
+    }
+    nebulaGeo.setAttribute('position', new THREE.BufferAttribute(nebulaPos, 3));
+    nebulaGeo.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
+    const nebulaMat = new THREE.PointsMaterial({ size: 300, map: nebulaTexture, vertexColors: true, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
+    nebulaGroup.add(new THREE.Points(nebulaGeo, nebulaMat));
+
+    // Dust & Fireflies
+    const orbGeo = new THREE.BufferGeometry();
+    const orbCount = 100;
+    const orbPos = new Float32Array(orbCount*3);
+    const orbVel = [];
+    for(let i=0; i<orbCount; i++) {
+        orbPos[i*3] = (Math.random()-0.5)*600;
+        orbPos[i*3+1] = (Math.random()-0.5)*600;
+        orbPos[i*3+2] = (Math.random()-0.5)*600;
+        orbVel.push({x:(Math.random()-0.5)*0.2, y:(Math.random()-0.5)*0.2, z:(Math.random()-0.5)*0.2});
+    }
+    orbGeo.setAttribute('position', new THREE.BufferAttribute(orbPos, 3));
+    const orbMat = new THREE.PointsMaterial({ size: 5, map: createGlowTexture('rgba(255,215,0,0.8)'), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
+    const orbs = new THREE.Points(orbGeo, orbMat);
+    scene.add(orbs);
+
+    // Heart Explosion
+    const heartGroup = new THREE.Group();
+    scene.add(heartGroup);
+    const heartShape = new THREE.Shape();
+    heartShape.moveTo(25, 25); heartShape.bezierCurveTo(25, 25, 20, 0, 0, 0); heartShape.bezierCurveTo(-30, 0, -30, 35, -30, 35); heartShape.bezierCurveTo(-30, 55, -10, 77, 25, 95); heartShape.bezierCurveTo(60, 77, 80, 55, 80, 35); heartShape.bezierCurveTo(80, 35, 80, 0, 50, 0); heartShape.bezierCurveTo(35, 0, 25, 25, 25, 25);
+    const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 5, bevelEnabled: false });
+    heartGeo.center();
+    const heartMeshMat = new THREE.MeshBasicMaterial({ color: 0xff1493 });
+    let activeHearts = [];
+
+    function triggerSuperHug() {
+        const overlay = document.getElementById('flash-overlay');
+        overlay.style.opacity = 1;
+        setTimeout(()=>overlay.style.opacity=0, 600);
+        gsap.to(camera.position, {y: camera.position.y + 5, duration: 0.1, yoyo: true, repeat: 3});
+        for(let i=0; i<40; i++) {
+            const h = new THREE.Mesh(heartGeo, heartMeshMat);
+            const vec = new THREE.Vector3(0, 0, -50).applyQuaternion(camera.quaternion).add(camera.position);
+            h.position.copy(vec);
+            h.scale.set(0.05, 0.05, 0.05);
+            h.rotation.z = Math.PI;
+            h.userData = { vel: new THREE.Vector3((Math.random()-0.5)*30, (Math.random()-0.5)*30+10, (Math.random()-0.5)*30-20), rot: {x: Math.random()*0.2, y: Math.random()*0.2} };
+            heartGroup.add(h); activeHearts.push(h);
+        }
+    }
+
+    /* ----------------------------------------------------------------
+       6. ANIMATION LOOP
+    ---------------------------------------------------------------- */
+    const clock = new THREE.Clock();
+    function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        // Animate Yellow Flower
+        sunflowerGroup.rotation.z = Math.sin(t*0.15) * 0.1;
+        sunflowerGroup.rotation.y = Math.sin(t*0.2) * 0.1;
+        petalLayers.forEach(p => { p.rotation.x = p.userData.initialX + Math.sin(t*p.userData.speed + p.userData.offset)*0.15; });
+
+        // Animate Pink Flower (If Visible)
+        if(pinkFlowerGroup.visible) {
+            pinkFlowerGroup.rotation.z = Math.sin(t*0.2) * 0.1;
+            pinkFlowerGroup.rotation.y = Math.cos(t*0.15) * 0.1;
+            // Pulsing light
+            pinkLight.intensity = 3 + Math.sin(t*3)*1; 
+            pinkLayers.forEach(p => { p.rotation.x = p.userData.initialX + Math.sin(t*p.userData.speed + p.userData.offset)*0.2; });
+        }
+
+        // Nebula
+        nebulaGroup.rotation.z = t * 0.02;
+
+        // Orbs
+        const oPos = orbs.geometry.attributes.position.array;
+        for(let i=0; i<orbCount; i++) {
+            oPos[i*3] += orbVel[i].x; oPos[i*3+1] += orbVel[i].y; oPos[i*3+2] += orbVel[i].z;
+            if(Math.abs(oPos[i*3])>300) orbVel[i].x *= -1;
+            if(Math.abs(oPos[i*3+1])>300) orbVel[i].y *= -1;
+            if(Math.abs(oPos[i*3+2])>300) orbVel[i].z *= -1;
+        }
+        orbs.geometry.attributes.position.needsUpdate = true;
+
+        // Hearts
+        for(let i=activeHearts.length-1; i>=0; i--) {
+            const h = activeHearts[i];
+            h.position.add(h.userData.vel); h.rotation.x += h.userData.rot.x; h.rotation.y += h.userData.rot.y;
+            h.userData.vel.y -= 0.3; h.scale.multiplyScalar(0.97);
+            if(h.scale.x < 0.001) { heartGroup.remove(h); activeHearts.splice(i,1); }
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    /* ----------------------------------------------------------------
+       7. UI LOGIC & STREAK SYSTEM
+    ---------------------------------------------------------------- */
+    // ⚠️ CHANGE THIS DATE TO YOUR ANNIVERSARY/START DATE
+    const startDate = new Date("2023-01-01"); 
+
+    let daysTogether = 0;
+
+    function startJourney() {
+        const audio = document.getElementById('bg-music');
+        if(audio) {
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log("Audio requires interaction"));
+        }
+        
+        gsap.to("#intro", { opacity: 0, duration: 1.5, onComplete: () => {
+            document.getElementById('intro').style.display = 'none';
+            // FIX: Make visible, but keep pointerEvents: none in CSS for the container
+            const ui = document.getElementById('ui-layer');
+            ui.style.visibility = 'visible';
+            gsap.to(ui, { opacity: 1, duration: 1 });
+            gsap.to(".dashboard", { y: 0, duration: 1, ease: "back.out(1.2)" });
+        }});
+        gsap.to(camera.position, { z: 250, duration: 3, ease: "power2.out" });
+
+        // Calculate Days
+        const now = new Date();
+        const diff = now - startDate;
+        daysTogether = Math.floor(diff/(1000*60*60*24));
+        document.getElementById('timer').innerText = `${daysTogether} Days`;
+        document.getElementById('streak-number').innerText = daysTogether;
+    }
+
+    function toggleMusic() {
+        const audio = document.getElementById('bg-music');
+        const icon = document.getElementById('music-icon');
+        const text = document.getElementById('music-text');
+        if(audio.paused) {
+            audio.play(); icon.innerHTML='<i class="fa-solid fa-pause"></i>'; text.innerText="Playing...";
+        } else {
+            audio.pause(); icon.innerHTML='<i class="fa-solid fa-play"></i>'; text.innerText="Paused";
+        }
+    }
+
+    /* --- STREAK MODE LOGIC --- */
+    function openStreakMode() {
+        // FIX: Hide normal UI completely so it doesn't block events
+        gsap.to("#ui-layer", { opacity: 0, duration: 0.5, onComplete: () => {
+            document.getElementById('ui-layer').style.visibility = 'hidden';
+        }});
+        
+        // Show Streak Overlay
+        const streak = document.getElementById('streak-overlay');
+        streak.style.display = 'block';
+        gsap.to(streak, { opacity: 1, delay: 0.5, duration: 0.5 });
+
+        // Switch Flowers
+        gsap.to(sunflowerGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => {
+            sunflowerGroup.visible = false;
+            pinkFlowerGroup.visible = true;
+            
+            // GROW THE PINK FLOWER BASED ON DAYS
+            // Logic: Base size 0.5. Adds size based on days. 
+            // 30 days = size 0.8. 365 days = size 1.5. Max size 2.5.
+            let growthFactor = 0.5 + (daysTogether / 200); 
+            if(growthFactor > 2.5) growthFactor = 2.5;
+
+            pinkFlowerGroup.scale.set(0,0,0);
+            gsap.to(pinkFlowerGroup.scale, { x: growthFactor, y: growthFactor, z: growthFactor, duration: 1.5, ease: "elastic.out(1, 0.5)" });
+        }});
+        
+        // Move Camera for dramatic look
+        gsap.to(camera.position, { z: 200, y: 10, duration: 1.5 });
+    }
+
+    function closeStreakMode() {
+        // Hide Streak Overlay
+        gsap.to("#streak-overlay", { opacity: 0, duration: 0.5, onComplete: () => {
+             document.getElementById('streak-overlay').style.display = 'none';
+        }});
+        
+        // Show normal UI
+        const ui = document.getElementById('ui-layer');
+        ui.style.visibility = 'visible';
+        gsap.to(ui, { opacity: 1, delay: 0.5, duration: 0.5 });
+
+        // Switch Flowers Back
+        gsap.to(pinkFlowerGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => {
+            pinkFlowerGroup.visible = false;
+            sunflowerGroup.visible = true;
+            gsap.to(sunflowerGroup.scale, { x: 1, y: 1, z: 1, duration: 1, ease: "elastic.out(1, 0.7)" });
+        }});
+
+        gsap.to(camera.position, { z: 250, y: 30, duration: 1.5 });
+    }
+
+    let uiVisible = true;
+    function toggleUI() {
+        uiVisible = !uiVisible;
+        const ui = document.getElementById('ui-layer');
+        if(uiVisible) {
+            // SHOW UI: Bring back the fog and the interface
+            ui.style.visibility = 'visible';
+            gsap.to(ui, { opacity: 1, duration: 0.5 });
+            
+            // Smoothly bring back the fog (blur effect)
+            gsap.to(scene.fog, { density: 0.0008, duration: 1 });
+            
+            // Change icon back to open eye
+            toggleIcon.className = "fa-solid fa-eye";
+        } else {
+           // HIDE UI: Clear the fog so background is sharp
+            gsap.to(ui, { opacity: 0, duration: 0.5, onComplete: () => {
+                ui.style.visibility = 'hidden';
+            }});
+
+            // Smoothly remove the fog (makes stars/nebula sharp)
+            gsap.to(scene.fog, { density: 0, duration: 1 });
+            
+            // Change icon to crossed-out eye
+            toggleIcon.className = "fa-solid fa-eye-slash";
+        }
+    }
+
+    function openModal(id) {
+        document.querySelectorAll('.modal-content').forEach(el => el.style.display = 'none');
+        document.getElementById('modal-'+id).style.display = 'block';
+        
+        const overlay = document.getElementById("modal-overlay");
+        // FIX: While modal is open, we WANT it to block clicks
+        overlay.style.pointerEvents = "auto";
+        gsap.to(overlay, { opacity: 1, duration: 0.3 });
+        gsap.fromTo("#modal-"+id, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 });
+        
+        if(id==='daily') {
+            const quotes = ["You are my favorite thought. hehehehe",
+"I love you to the moon & back. :)))))",
+"You are my baby!!!!!!",
+"For every prayer meets your peace, and hopefully you will reach where you want to be.",
+"Daily Daily po! Mahal na mahal pa din kita!!!",
+"Hello!!!!!!!!! Malapit naba anniversary? if not edi happy birthday hehe iloveyou.",
+"Kung ano man ang lalabas dito, it's a reminder na, I love love you po!!!!!",
+
+"Ikaw lagi yung nasa isip ko kahit wala akong ginagawa hehe.",
+"Miss na miss na kita agad kahit kakachat lang natin :((((",
+"Ang swerte ko kasi ikaw yung naging saakin.",
+"Pagod ka man ngayon, andito lang ako palagi for you, okay?",
+"Random message lang to pero... I LOVE YOUUUUUU!!!",
+"Ikaw yung pahinga ko sa magulong mundo.",
+"Hindi ako magsasawang mahalin ka, kahit ilang lifetime pa.",
+"Uy, kumain ka na ba? wag mo papabayaan sarili mo ha :(",
+"Kahit anong mangyari, ikaw pa din pipiliin ko.",
+"Ikaw yung pinaka magandang nangyari sa buhay ko.",
+"Araw araw kitang pipiliin, walang palya.",
+"Konting lambing lang… iloveyou poooo 🥺",
+"Ikaw yung dahilan kung bakit masaya ako ngayon.",
+"Kahit simpleng moments lang, basta kasama kita, okay na ako.",
+"Kung pwede lang kitang yakapin ngayon, ginawa ko na.",
+"Please always take care of yourself for me, okay?",
+"Ang cute mo sobra, di ko kaya 😤❤️",
+"Forever ko na tong feeling na to sayo, promise.",
+"Ikaw yung ‘home’ ko.",
+"Mahal na mahal kita, sobra pa sa sobra.",
+
+"Good morning pooooo!! sana panaginip mo ako hehe.",
+"Good night po, ako pa din last thought mo ha 😤",
+"Ikaw yung comfort ko kahit sa simpleng chat lang.",
+"Every notif na galing sayo, automatic smile ako hehe.",
+"Sana lagi kang okay, pero pag hindi, nandito ako.",
+"Ikaw yung reason kung bakit ang sarap magmahal.",
+"Di ko alam paano, pero mas lalo pa kitang minamahal everyday.",
+"Kahit wala tayong ginagawa, masaya ako basta kausap kita.",
+"Pag naiisip kita, parang ang gaan ng lahat.",
+"Hinding hindi kita pagsasawaan, kahit anong mangyari.",
+"Ikaw yung pinaka safe place ko.",
+"Ang lambing mo sobra, naaadik na ako 😭",
+"Kung pwede lang kitang makita ngayon, tatakbo na ako sayo.",
+"Ikaw yung pinaka paborito kong tao sa buong mundo.",
+"Kahit ilang beses pa kita mahalin, kulang pa din.",
+"Sana maramdaman mo kung gaano kita kamahal.",
+"Ikaw lang sapat na sakin, wala na akong hihilingin pa.",
+"Pag ikaw kasama ko, parang walang problema.",
+"Ikaw yung pahinga na hindi ko hinahanap, pero dumating.",
+"Minsan napapangiti nalang ako bigla… kasi ikaw iniisip ko.",
+"Please wag ka mapagod sakin ha, mahal na mahal kita.",
+"Ikaw yung pinaka mahalagang part ng araw ko.",
+"Simple lang naman gusto ko… ikaw lang, habang buhay.",
+"Kung may reset man sa buhay, ikaw pa din pipiliin ko.",
+"Ikaw at ikaw lang, walang iba, never.",
+"Mas gusto ko pang kausap ka kaysa matulog hehe.",
+"Ang saya ko kasi ikaw yung sakin.",
+"Ikaw yung dahilan kung bakit gusto ko maging better.",
+"Kahit malayo, ramdam na ramdam pa din kita.",
+"Ikaw yung pinakamagandang ‘hi’ at pinakamahirap na ‘bye’."]
+            document.getElementById('typewriter-text').innerText = quotes[Math.floor(Math.random()*quotes.length)];
+        }
+    }
+    function closeAllModals() {
+        const overlay = document.getElementById("modal-overlay");
+        // FIX: Stop blocking immediately so user can rotate while fading out
+        overlay.style.pointerEvents = "none";
+        gsap.to(overlay, { opacity: 0, duration: 0.3 });
+    }
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
