@@ -264,7 +264,7 @@
 <div class="entrance-screen" id="intro">
     <h1 class="title-main">For my lovely pinkitel.</h1>
     <p style="color: #aaa; margin-bottom: 40px; letter-spacing: 1px;">A world built just for you 🌻</p>
-    <button class="enter-btn" onclick="startJourney()">ENTER UNIVERSE</button>
+    <button class="enter-btn" onclick="startJourney(); forcePlayAudio()">ENTER UNIVERSE</button>
 </div>
 
 <!-- DASHBOARD -->
@@ -378,6 +378,22 @@
     /* ----------------------------------------------------------------
        1. HELPER: PROCEDURAL TEXTURE GENERATOR
     ---------------------------------------------------------------- */
+    function forcePlayAudio() {
+    const audio = document.getElementById('bg-music');
+    audio.volume = 0.5;
+
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+        playPromise.catch(() => {
+            // fallback: wait for ANY click
+            document.addEventListener('click', () => {
+                audio.play();
+            }, { once: true });
+        });
+    }
+}
+    
     function createGlowTexture(color) {
         const canvas = document.createElement('canvas');
         canvas.width = 64; canvas.height = 64;
