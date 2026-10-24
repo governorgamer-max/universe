@@ -2,17 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#020005">
 <title>My Universe🌻</title>
-<!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<!-- OrbitControls -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<!-- GSAP -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@300;500;700&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
 
 <style>
@@ -20,242 +16,363 @@
         --bg-deep: #020005;
         --primary: #ff69b4;
         --sunflower: #ffd700;
-        --glass: rgba(255, 255, 255, 0.05); 
-        --glass-border: rgba(255, 255, 255, 0.1);
+        --glass: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.12);
         --fire: #ff4500;
     }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { overflow: hidden; background-color: var(--bg-deep); font-family: 'Montserrat', sans-serif; color: white; }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-        overflow: hidden;
-        background-color: var(--bg-deep);
-        font-family: 'Montserrat', sans-serif;
-        color: white;
-    }
-
-    /* 3D CANVAS */
-    #canvas-container {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 1;
-        background: radial-gradient(circle at center, #10051a 0%, #000000 100%);
-    }
-
-    /* FLASH OVERLAY */
+    #canvas-container { position: fixed; inset: 0; z-index: 1; background: radial-gradient(circle at center, #10051a 0%, #000000 100%); }
     #flash-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        position: fixed; inset: 0;
         background: radial-gradient(circle, rgba(255,105,180,0.6) 0%, transparent 70%);
-        opacity: 0; pointer-events: none; z-index: 900;
-        transition: opacity 0.5s;
+        opacity: 0; pointer-events: none; z-index: 900; transition: opacity 0.5s;
     }
 
-    /* --- STREAK OVERLAY UI --- */
-    #streak-overlay {
-        position: fixed; top: 15%; width: 100%; text-align: center;
-        z-index: 500; 
-        display: none; 
-        opacity: 0;
-        /* FIX: Container passes clicks through so you can rotate scene */
-        pointer-events: none; 
-    }
+    /* ---------- STREAK OVERLAY ---------- */
+    #streak-overlay { position: fixed; top: 9%; width: 100%; text-align: center; z-index: 500; display: none; opacity: 0; pointer-events: none; padding: 0 16px; }
     .streak-badge {
         display: inline-flex; align-items: center; gap: 15px;
-        background: rgba(0,0,0,0.6); border: 2px solid var(--primary);
-        padding: 15px 40px; border-radius: 50px;
-        box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);
-        backdrop-filter: blur(10px);
-        pointer-events: auto; /* Badge is interactable */
+        background: rgba(0,0,0,0.55); border: 2px solid var(--primary);
+        padding: 12px 38px; border-radius: 50px;
+        box-shadow: 0 0 40px rgba(255, 105, 180, 0.45);
+        backdrop-filter: blur(10px); pointer-events: auto;
     }
-    .streak-count { font-size: 3rem; font-weight: 800; color: #fff; font-family: 'Montserrat'; }
-    .streak-fire { font-size: 2.5rem; color: var(--fire); animation: flame 1.5s infinite alternate; }
-    .streak-sub { font-size: 1.2rem; color: #ddd; margin-top: 10px; letter-spacing: 2px; text-transform: uppercase; }
-    
+    .streak-count { font-size: 3rem; font-weight: 700; color: #fff; }
+    .streak-fire { font-size: 2.4rem; color: var(--fire); animation: flame 1.5s infinite alternate; }
+    .streak-sub { font-size: 1rem; color: #eee; margin-top: 12px; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 12px #000; }
+    .streak-clock { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+    .clock-box {
+        min-width: 62px; padding: 8px 6px; border-radius: 14px;
+        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,105,180,0.4);
+        backdrop-filter: blur(8px);
+    }
+    .clock-box b { display: block; font-size: 1.5rem; color: #fff; }
+    .clock-box span { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--primary); }
+    .streak-next { margin-top: 14px; font-size: 0.85rem; color: #ffd6ec; text-shadow: 0 0 12px #000; }
     @keyframes flame { from { transform: scale(1); filter: drop-shadow(0 0 5px orange); } to { transform: scale(1.2); filter: drop-shadow(0 0 20px red); } }
 
     .back-btn {
-        margin-top: 20px; 
-        /* FIX: Button captures clicks */
-        pointer-events: auto; 
-        cursor: pointer;
+        margin-top: 18px; pointer-events: auto; cursor: pointer;
         padding: 10px 30px; background: white; color: black; border-radius: 30px;
-        font-weight: bold; border: none; transition: 0.3s;
+        font-weight: bold; border: none; transition: 0.3s; font-family: 'Montserrat', sans-serif;
     }
     .back-btn:hover { transform: scale(1.1); background: var(--primary); color: white; }
 
-    /* ENTRANCE SCREEN */
+    /* ---------- ENTRANCE ---------- */
     .entrance-screen {
-        position: absolute; width: 100%; height: 100%;
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-        background: #000; z-index: 1000; /* High Z-index */
-        pointer-events: auto; /* Must block everything initially */
+        position: absolute; inset: 0; z-index: 1000; pointer-events: auto;
+        display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 20px;
+        background: radial-gradient(circle at center, rgba(2,0,5,0.15) 0%, rgba(2,0,5,0.55) 55%, rgba(2,0,5,0.92) 100%);
     }
-    
     .title-main {
-        font-family: 'Dancing Script', cursive;
-        font-size: 5rem;
-        background: linear-gradient(to right, #ffd700, #ff69b4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 20px;
-        filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.6));
-        text-align: center;
+        font-family: 'Dancing Script', cursive; font-size: 5rem; text-align: center; margin-bottom: 16px;
+        background: linear-gradient(90deg, #ffd700, #ff69b4, #ffd700); background-size: 200% 100%;
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 18px rgba(255, 105, 180, 0.7));
+        animation: shine 6s linear infinite;
     }
-
+    @keyframes shine { to { background-position: 200% 0; } }
+    .intro-sub { color: #ddd; margin-bottom: 14px; letter-spacing: 1px; text-align: center; text-shadow: 0 0 10px #000; }
+    .intro-hint { color: #999; margin-bottom: 38px; font-size: 0.75rem; letter-spacing: 3px; text-transform: uppercase; }
     .enter-btn {
-        padding: 15px 50px;
-        border: 1px solid var(--sunflower);
-        border-radius: 50px;
-        background: rgba(255, 215, 0, 0.1);
-        color: var(--sunflower);
-        font-family: 'Montserrat', sans-serif;
-        font-weight: bold;
-        letter-spacing: 2px;
-        cursor: pointer;
-        transition: 0.4s;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        padding: 15px 50px; border: 1px solid var(--sunflower); border-radius: 50px;
+        background: rgba(255, 215, 0, 0.1); color: var(--sunflower);
+        font-family: 'Montserrat', sans-serif; font-weight: bold; letter-spacing: 2px; cursor: pointer;
+        transition: 0.4s; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); animation: pulse 2.4s ease-in-out infinite;
     }
-    .enter-btn:hover { 
-        background: var(--sunflower); 
-        color: black; 
-        box-shadow: 0 0 50px var(--sunflower); 
-        transform: scale(1.1); 
-    }
+    .enter-btn:hover { background: var(--sunflower); color: black; box-shadow: 0 0 50px var(--sunflower); transform: scale(1.1); }
+    @keyframes pulse { 50% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.5); } }
 
-    /* --- UI LAYER --- */
+    /* ---------- UI LAYER ---------- */
     #ui-layer {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 10;
+        position: absolute; inset: 0; z-index: 10;
         display: flex; justify-content: center; align-items: center;
-        /* FIX: The Full Screen Container MUST NOT block clicks */
-        pointer-events: none; 
-        opacity: 0;
-        visibility: hidden;
+        pointer-events: none; opacity: 0; visibility: hidden;
     }
+    .hero-title { position: absolute; top: 3.5vh; left: 0; width: 100%; text-align: center; pointer-events: none; }
+    .hero-title h2 {
+        font-family: 'Dancing Script', cursive; font-size: clamp(1.8rem, 4vw, 3rem);
+        background: linear-gradient(90deg, #ffd700, #ff69b4, #ffd700); background-size: 200% 100%;
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 12px rgba(255, 105, 180, 0.55)); animation: shine 6s linear infinite;
+    }
+    .hero-title p { font-size: 0.68rem; letter-spacing: 4px; text-transform: uppercase; color: #c9c9c9; margin-top: 2px; text-shadow: 0 0 8px #000; }
 
-    /* DASHBOARD */
-    .dashboard {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 25px;
-        width: 85%; max-width: 900px;
-        transform: translateY(30px);
-    }
+    .dashboard { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 3vw; pointer-events: none; }
+    .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: min(36vw, 400px); }
 
     .holo-card {
-        background: var(--glass);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        padding: 30px 20px;
-        border-radius: 20px;
-        text-align: center;
+        background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border); padding: 22px 12px; border-radius: 20px; text-align: center;
         transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        /* FIX: Cards MUST capture clicks */
-        pointer-events: auto; 
-        cursor: pointer;
-        position: relative; overflow: hidden;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        pointer-events: auto; cursor: pointer; position: relative; overflow: hidden;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
     }
-    
-    .holo-card:hover { 
-        transform: translateY(-10px) scale(1.02); 
-        border-color: rgba(255, 105, 180, 0.5);
-        background: rgba(255, 255, 255, 0.1);
-        box-shadow: 0 10px 40px rgba(255, 105, 180, 0.3); 
+    .holo-card::after {
+        content: ""; position: absolute; inset: 0; border-radius: 20px; opacity: 0; transition: 0.4s;
+        background: radial-gradient(circle at 50% 0%, rgba(255,105,180,0.25), transparent 70%);
     }
-    
-    .card-icon { font-size: 2.2rem; margin-bottom: 15px; color: var(--primary); transition: 0.3s; }
-    .holo-card:hover .card-icon { color: var(--sunflower); transform: rotate(10deg) scale(1.1); }
-    .card-title { font-family: 'Playfair Display'; font-size: 1.4rem; margin-bottom: 8px; color: #fff; }
-    .card-desc { font-size: 0.85rem; color: #aaa; font-weight: 300; }
-    
-    .timeline-text { font-size: 0.9rem; color: var(--sunflower); margin-top: 5px; font-weight: bold; text-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
+    .holo-card:hover { transform: translateY(-8px) scale(1.03); border-color: rgba(255, 105, 180, 0.6); background: rgba(255, 255, 255, 0.1); box-shadow: 0 10px 40px rgba(255, 105, 180, 0.3); }
+    .holo-card:hover::after { opacity: 1; }
+    .card-icon { font-size: 1.9rem; margin-bottom: 10px; color: var(--primary); transition: 0.3s; }
+    .holo-card:hover .card-icon { color: var(--sunflower); transform: rotate(10deg) scale(1.15); }
+    .card-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin-bottom: 6px; color: #fff; }
+    .card-desc { font-size: 0.72rem; color: #b5b5b5; font-weight: 300; line-height: 1.4; }
+    .timeline-text { font-size: 0.85rem; color: var(--sunflower); margin-top: 4px; font-weight: bold; text-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
 
     .view-toggle {
-        position: fixed; bottom: 30px; right: 30px;
-        z-index: 50; width: 45px; height: 45px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 50%;
-        color: white; display: flex; justify-content: center; align-items: center;
-        cursor: pointer; transition: 0.3s;
-        backdrop-filter: blur(5px);
-        /* FIX: Toggle button must be clickable */
-        pointer-events: auto; 
+        position: fixed; bottom: 24px; right: 24px; z-index: 50; width: 45px; height: 45px;
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
+        color: white; display: flex; justify-content: center; align-items: center; cursor: pointer;
+        transition: 0.3s; backdrop-filter: blur(5px); pointer-events: auto;
     }
     .view-toggle:hover { background: var(--primary); transform: rotate(90deg); box-shadow: 0 0 15px var(--primary); }
 
-    /* --- MODAL --- */
+    /* ---------- MODALS ---------- */
     .modal-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        z-index: 200;
+        position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); z-index: 200;
         display: flex; justify-content: center; align-items: center;
-        opacity: 0; 
-        /* FIX: Start with pointer-events none so it doesn't block */
-        pointer-events: none; 
-        backdrop-filter: blur(15px);
+        opacity: 0; pointer-events: none; backdrop-filter: blur(15px);
     }
-    
     .modal-content {
-        width: 90%; max-width: 500px;
-        background: rgba(20, 10, 30, 0.95);
-        border: 1px solid var(--primary);
-        border-radius: 20px;
-        padding: 40px;
-        position: relative;
-        text-align: center;
-        box-shadow: 0 0 60px rgba(255, 105, 180, 0.2);
-        /* Content inside modal blocks clicks */
-        pointer-events: auto; 
+        width: 90%; max-width: 500px; max-height: 86vh; overflow-y: auto;
+        background: rgba(20, 10, 30, 0.95); border: 1px solid var(--primary); border-radius: 20px;
+        padding: 38px 30px; position: relative; text-align: center;
+        box-shadow: 0 0 60px rgba(255, 105, 180, 0.2); pointer-events: auto;
     }
-    
-    .close-btn {
-        position: absolute; top: 20px; right: 25px;
-        font-size: 24px; color: #666; cursor: pointer; pointer-events: auto; transition: 0.3s;
-    }
+    .modal-content h3 { font-family: 'Dancing Script', cursive; color: var(--primary); font-size: 2.5rem; margin-bottom: 12px; }
+    .muted { color: #aaa; font-size: 0.85rem; line-height: 1.5; }
+    .close-btn { position: absolute; top: 18px; right: 22px; font-size: 24px; color: #777; cursor: pointer; transition: 0.3s; z-index: 5; }
     .close-btn:hover { color: var(--primary); transform: rotate(90deg); }
+    hr.soft { border: 0; height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px; }
 
-    .gallery-grid {
-        display: grid; grid-template-columns: repeat(2, 1fr);
-        gap: 15px; margin-top: 20px; max-height: 50vh; overflow-y: auto;
-    }
-    .gallery-item {
-        width: 100%; height: 150px; object-fit: cover;
-        border-radius: 10px; transition: 0.3s; opacity: 0.8;
-    }
+    .gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; max-height: 50vh; overflow-y: auto; }
+    .gallery-item { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; transition: 0.3s; opacity: 0.85; cursor: zoom-in; }
     .gallery-item:hover { opacity: 1; transform: scale(1.05); box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3); }
 
-    @media (max-width: 768px) {
-        .dashboard { grid-template-columns: 1fr; width: 85%; gap: 15px; }
-        .holo-card { padding: 20px; display: flex; align-items: center; text-align: left; }
-        .card-icon { margin-bottom: 0; margin-right: 20px; font-size: 1.8rem; }
-        .title-main { font-size: 3.5rem; }
+    #lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.93); display: none; justify-content: center; align-items: center; cursor: zoom-out; opacity: 0; }
+    #lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 14px; box-shadow: 0 0 60px rgba(255,105,180,0.4); }
+
+    .note-nav { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 25px; }
+    .note-btn {
+        width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 105, 180, 0.5); color: white; cursor: pointer; transition: 0.3s;
+        display: flex; justify-content: center; align-items: center;
+    }
+    .note-btn:hover { background: var(--primary); box-shadow: 0 0 15px var(--primary); transform: scale(1.1); }
+    .note-counter { font-size: 0.85rem; color: #aaa; letter-spacing: 2px; min-width: 70px; }
+
+    .soft-btn {
+        margin-top: 18px; padding: 12px 28px; border-radius: 30px; cursor: pointer; color: #fff;
+        font-family: 'Montserrat', sans-serif; font-weight: 500; letter-spacing: 1px;
+        background: rgba(255, 105, 180, 0.12); border: 1px solid rgba(255, 105, 180, 0.6); transition: 0.3s;
+        user-select: none; -webkit-user-select: none; touch-action: none;
+    }
+    .soft-btn:hover { background: var(--primary); box-shadow: 0 0 20px var(--primary); transform: scale(1.05); }
+
+    .reason-box {
+        min-height: 120px; display: flex; align-items: center; justify-content: center; padding: 20px;
+        border: 1px dashed rgba(255,105,180,0.5); border-radius: 16px; background: rgba(255,105,180,0.05); margin-top: 8px;
+    }
+    .reason-box p { font-size: 1.1rem; line-height: 1.6; color: #f0e6ee; }
+    .reason-count { margin-top: 10px; font-size: 0.75rem; letter-spacing: 3px; color: #999; }
+
+    .ow-btn {
+        display: block; width: 100%; margin: 10px 0; padding: 14px; border-radius: 14px; cursor: pointer; color: #fff;
+        font-family: 'Montserrat', sans-serif; font-size: 0.95rem; transition: 0.3s;
+        background: rgba(255,105,180,0.08); border: 1px solid rgba(255,105,180,0.4);
+    }
+    .ow-btn:hover { background: rgba(255,105,180,0.3); transform: translateX(4px); }
+    .ow-letter { text-align: left; line-height: 1.8; color: #e6dde6; font-size: 0.98rem; margin-top: 6px; }
+
+    .plucker { position: relative; width: 240px; height: 240px; margin: 18px auto 6px; }
+    .pp {
+        position: absolute; left: calc(50% - 13px); top: calc(50% - 98px); width: 26px; height: 76px;
+        transform-origin: 50% 98px; cursor: pointer;
+        border-radius: 50% 50% 50% 50% / 78% 78% 22% 22%;
+        background: linear-gradient(to top, #e0620a, #ffb300 55%, #ffe566);
+        box-shadow: 0 0 10px rgba(255,190,0,0.4);
+        transition: transform 0.9s ease, opacity 0.9s ease;
+    }
+    .pc {
+        position: absolute; left: 50%; top: 50%; width: 62px; height: 62px; margin: -31px 0 0 -31px; border-radius: 50%;
+        background: radial-gradient(circle, #7a4313 0%, #3a1c08 60%, #1c0b04 100%); box-shadow: 0 0 20px rgba(255,150,0,0.5);
+    }
+    .pluck-text { min-height: 56px; font-size: 1.25rem; font-family: 'Playfair Display', serif; color: #fff; margin-top: 10px; }
+
+    .meter { height: 26px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,105,180,0.5); overflow: hidden; margin: 22px 0 10px; }
+    .meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff69b4, #ffd700, #ff4500); border-radius: 20px; }
+    .meter-val { font-size: 2.6rem; font-weight: 700; color: #fff; }
+    .meter-msg { min-height: 44px; font-size: 0.95rem; color: #ffd6ec; margin-top: 4px; }
+
+    .dream-list { list-style: none; text-align: left; margin-top: 8px; }
+    .dream-list li {
+        display: flex; align-items: center; gap: 14px; padding: 12px 14px; margin: 8px 0; border-radius: 12px; cursor: pointer;
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); transition: 0.3s; font-size: 0.92rem; line-height: 1.4;
+    }
+    .dream-list li:hover { border-color: rgba(255,105,180,0.5); background: rgba(255,105,180,0.08); }
+    .dream-list .box { flex: 0 0 22px; height: 22px; border-radius: 50%; border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; transition: 0.3s; }
+    .dream-list li.done .box { background: var(--primary); color: #fff; box-shadow: 0 0 12px var(--primary); }
+    .dream-list li.done span { text-decoration: line-through; color: #888; }
+
+    .rise { position: absolute; pointer-events: none; font-size: 1.4rem; animation: rise 1.6s ease-out forwards; z-index: 6; }
+    @keyframes rise { from { transform: translateY(0) scale(0.6); opacity: 1; } to { transform: translateY(-140px) scale(1.4); opacity: 0; } }
+
+    #toast {
+        position: fixed; left: 50%; bottom: 9vh; transform: translateX(-50%); z-index: 600; padding: 14px 26px; border-radius: 30px;
+        background: rgba(20,10,30,0.88); border: 1px solid var(--primary); color: #fff; opacity: 0; pointer-events: none;
+        backdrop-filter: blur(10px); font-size: 0.95rem; text-align: center; max-width: 86vw; box-shadow: 0 0 30px rgba(255,105,180,0.3);
+    }
+
+    @media (max-width: 900px) {
+        body { overscroll-behavior: none; }
+        #ui-layer { align-items: flex-end; }
+
+        .hero-title { top: calc(2vh + env(safe-area-inset-top)); padding: 0 56px; }
+        .hero-title h2 { font-size: clamp(1.3rem, 6.4vw, 1.7rem); }
+        .hero-title p { font-size: 0.55rem; letter-spacing: 2.5px; padding: 0 24px; }
+
+        /* bottom dock: 3 compact tiles per row */
+        .dashboard {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;
+            max-height: 47vh; max-height: 47dvh; overflow-y: auto; overscroll-behavior: contain;
+            padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+            pointer-events: auto; -webkit-overflow-scrolling: touch;
+            background: linear-gradient(to top, rgba(2,0,5,0.88) 0%, rgba(2,0,5,0.6) 70%, rgba(2,0,5,0) 100%);
+        }
+        .side { display: contents; }
+        .holo-card {
+            padding: 12px 4px 10px; border-radius: 16px; min-height: 76px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .holo-card:hover { transform: none; box-shadow: 0 4px 30px rgba(0,0,0,0.15); }
+        .holo-card:active { transform: scale(0.94); border-color: rgba(255,105,180,0.6); }
+        .card-icon { font-size: 1.35rem; margin-bottom: 6px; }
+        .card-title { font-size: 0.78rem; margin-bottom: 0; line-height: 1.2; }
+        .card-desc { display: none; }
+        .timeline-text { font-size: 0.68rem; margin-top: 2px; }
+
+        /* intro + controls */
+        .title-main { font-size: 3rem; }
+        .intro-sub { font-size: 0.95rem; }
+        .enter-btn { padding: 14px 40px; }
+        .view-toggle { bottom: auto; top: calc(12px + env(safe-area-inset-top)); right: 12px; width: 38px; height: 38px; z-index: 60; }
+
+        /* streak screen */
+        #streak-overlay { top: calc(7% + env(safe-area-inset-top)); }
+        .streak-badge { padding: 8px 26px; gap: 10px; }
+        .streak-count { font-size: 2.2rem; }
+        .streak-fire { font-size: 1.8rem; }
+        .streak-sub { font-size: 0.68rem; letter-spacing: 1.5px; margin-top: 10px; }
+        .streak-clock { gap: 7px; margin-top: 12px; }
+        .clock-box { min-width: 52px; padding: 6px 4px; }
+        .clock-box b { font-size: 1.2rem; }
+        .clock-box span { font-size: 0.5rem; }
+        .streak-next { font-size: 0.78rem; margin-top: 10px; }
+        .back-btn { margin-top: 14px; padding: 12px 34px; }
+
+        /* modals become bottom sheets */
+        .modal-overlay { align-items: flex-end; }
+        .modal-content {
+            width: 100%; max-width: none; border-radius: 24px 24px 0 0; border-bottom: none;
+            max-height: 88vh; max-height: 88dvh;
+            padding: 34px 20px calc(30px + env(safe-area-inset-bottom));
+        }
+        .modal-content h3 { font-size: 2.1rem; }
+        .close-btn { font-size: 28px; top: 12px; right: 16px; padding: 6px; }
+        .note-btn { width: 52px; height: 52px; }
+        .soft-btn { padding: 14px 30px; }
+        .gallery-grid { max-height: 56vh; gap: 10px; }
+        .gallery-item { height: 130px; }
+        .plucker { transform: scale(0.92); margin: 8px auto 0; }
+        .ow-btn { padding: 16px; }
+        .dream-list li { padding: 14px; }
+        #toast { bottom: calc(47vh + 14px); bottom: calc(47dvh + 14px); font-size: 0.85rem; }
+    }
+
+    /* phones held sideways */
+    @media (max-width: 900px) and (max-height: 520px) {
+        .hero-title { display: none; }
+        .dashboard { grid-template-columns: repeat(6, 1fr); max-height: 46vh; padding-top: 8px; gap: 8px; }
+        .holo-card { min-height: 58px; padding: 6px 2px; }
+        .card-title { font-size: 0.66rem; }
+        .card-icon { font-size: 1.1rem; margin-bottom: 3px; }
+        .modal-content { max-height: 94vh; }
+        #toast { bottom: calc(46vh + 10px); }
+    }
+    /* ---------- mobile fixes ---------- */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    .intro-hint { text-align: center; line-height: 1.8; }
+    #toast { width: max-content; }
+    .holo-card, .soft-btn, .ow-btn, .note-btn, .enter-btn, .back-btn, .view-toggle, .dream-list li, .close-btn { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+    #meter-btn { touch-action: none; -webkit-touch-callout: none; }
+
+    @media (hover: none) {
+        .holo-card:hover { transform: none; background: var(--glass); border-color: var(--glass-border); box-shadow: 0 4px 30px rgba(0,0,0,0.15); }
+        .holo-card:hover .card-icon { color: var(--primary); transform: none; }
+        .note-btn:hover, .soft-btn:hover, .ow-btn:hover, .enter-btn:hover, .back-btn:hover, .view-toggle:hover, .close-btn:hover { transform: none; }
+    }
+
+    @media (max-width: 900px) {
+        #vow-text { text-align: left !important; max-height: none !important; overflow: visible !important; padding-right: 0 !important; }
+        .gallery-grid { max-height: none; overflow: visible; }
+        .modal-content { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+        .holo-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(18, 8, 30, 0.62); }
+        .modal-overlay { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+        .dashboard { padding-left: calc(12px + env(safe-area-inset-left)); padding-right: calc(12px + env(safe-area-inset-right)); }
+        .intro-hint { font-size: 0.66rem; letter-spacing: 2px; padding: 0 12px; }
+    }
+
+    /* small portrait phones: 4 tiles per row so the whole dock fits */
+    @media (max-width: 900px) and (min-height: 521px) and (max-height: 720px) {
+        .dashboard { grid-template-columns: repeat(4, 1fr); max-height: 44vh; max-height: 44dvh; }
+        .holo-card { min-height: 66px; padding: 8px 2px; }
+        .card-icon { font-size: 1.15rem; margin-bottom: 4px; }
+        .card-title { font-size: 0.68rem; }
+        .timeline-text { font-size: 0.6rem; }
+        #toast { bottom: calc(44vh + 14px); bottom: calc(44dvh + 14px); }
+    }
+
+    /* streak screen on a phone held sideways: text on the left, flower on the right */
+    @media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+        #streak-overlay { top: 50%; transform: translateY(-50%); left: 0; width: 52%; padding: 0 12px; }
+        .streak-badge { padding: 6px 20px; }
+        .streak-count { font-size: 1.8rem; }
+        .streak-fire { font-size: 1.5rem; }
+        .streak-sub { font-size: 0.58rem; margin-top: 6px; }
+        .streak-clock { margin-top: 8px; gap: 5px; }
+        .clock-box { min-width: 46px; padding: 4px 3px; }
+        .clock-box b { font-size: 1rem; }
+        .streak-next { font-size: 0.7rem; margin-top: 6px; }
+        .back-btn { margin-top: 8px; padding: 8px 24px; }
+        .modal-content { max-width: 560px; margin: 0 auto; border-radius: 20px 20px 0 0; }
     }
 </style>
 </head>
 <body>
 
-<!-- AUDIO -->
-<!-- ⚠️ REPLACE SRC with her favorite song link. For local files, use src="songname.mp3" -->
-<audio id="bg-music" loop>
+<audio id="bg-music" loop preload="auto" playsinline>
     <source src="song.mp3" type="audio/mp3">
 </audio>
 
 <div id="flash-overlay"></div>
 <div id="canvas-container"></div>
+<div id="toast"></div>
 
-<!-- STREAK DISPLAY (Hidden by default) -->
+<!-- STREAK DISPLAY -->
 <div id="streak-overlay">
     <div class="streak-badge">
         <i class="fa-solid fa-fire streak-fire"></i>
         <span class="streak-count" id="streak-number">0</span>
     </div>
     <div class="streak-sub">Days Growing Together PS: Iloveyou </div>
+    <div class="streak-clock" id="streak-clock"></div>
+    <div class="streak-next" id="streak-next"></div>
     <button class="back-btn" onclick="closeStreakMode()">Return to Base</button>
 </div>
 
-<!-- HIDE UI BTN -->
 <div class="view-toggle" onclick="toggleUI()" title="Toggle View">
     <i class="fa-solid fa-eye"></i>
 </div>
@@ -263,60 +380,117 @@
 <!-- ENTRANCE -->
 <div class="entrance-screen" id="intro">
     <h1 class="title-main">For my lovely pinkitel.</h1>
-    <p style="color: #aaa; margin-bottom: 40px; letter-spacing: 1px;">A world built just for you 🌻</p>
+    <p class="intro-sub">A world built just for you 🌻</p>
+    <p class="intro-hint">turn your sound on 🔊</p>
     <button class="enter-btn" onclick="startJourney(); forcePlayAudio()">ENTER UNIVERSE</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="ui-layer">
+    <div class="hero-title">
+        <h2>Para sa'yo, my pinkitel</h2>
+        <p>every star up here is a reason i love you</p>
+    </div>
+
     <div class="dashboard" id="dashboard">
-        
-        <div class="holo-card" onclick="openModal('daily')">
-            <div class="card-icon"><i class="fa-solid fa-heart"></i></div>
-            <div>
-                <div class="card-title">Love Note</div>
-                <div class="card-desc">Open me  <p> </p> PS: Ulit ulitin mo </div>
+
+        <div class="side">
+            <div class="holo-card" onclick="openModal('daily')">
+                <div class="card-icon"><i class="fa-solid fa-heart"></i></div>
+                <div>
+                    <div class="card-title">Love Note</div>
+                    <div class="card-desc">Open me<br>PS: Ulit ulitin mo</div>
+                </div>
+            </div>
+
+            <div class="holo-card" onclick="openModal('gallery')">
+                <div class="card-icon"><i class="fa-solid fa-camera-retro"></i></div>
+                <div>
+                    <div class="card-title">Pinkitel</div>
+                    <div class="card-desc">Collections</div>
+                </div>
+            </div>
+
+            <div class="holo-card" onclick="openModal('letter')">
+                <div class="card-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
+                <div>
+                    <div class="card-title">The Vow</div>
+                    <div class="card-desc">My message</div>
+                </div>
+            </div>
+
+            <div class="holo-card" onclick="toggleMusic()">
+                <div class="card-icon" id="music-icon"><i class="fa-solid fa-play"></i></div>
+                <div>
+                    <div class="card-title">Favourite Song</div>
+                    <div class="card-desc" id="music-text">Click to Play</div>
+                </div>
+            </div>
+
+            <div class="holo-card" onclick="openStreakMode()">
+                <div class="card-icon"><i class="fa-solid fa-fire"></i></div>
+                <div>
+                    <div class="card-title">Our Streak</div>
+                    <div class="timeline-text" id="timer">Loading...</div>
+                </div>
+            </div>
+
+            <div class="holo-card" onclick="triggerSuperHug()">
+                <div class="card-icon"><i class="fa-solid fa-hands-holding-circle"></i></div>
+                <div>
+                    <div class="card-title">Big Hug</div>
+                    <div class="card-desc">Click Me!<br>Hug kita virtually</div>
+                </div>
             </div>
         </div>
 
-        <div class="holo-card" onclick="openModal('gallery')">
-            <div class="card-icon"><i class="fa-solid fa-camera-retro"></i></div>
-            <div>
-                <div class="card-title">Pinkitel</div>
-                <div class="card-desc">Collections</div>
+        <div class="side">
+            <div class="holo-card" onclick="openModal('reasons')">
+                <div class="card-icon"><i class="fa-solid fa-gem"></i></div>
+                <div>
+                    <div class="card-title">Reasons</div>
+                    <div class="card-desc">Why I love you</div>
+                </div>
             </div>
-        </div>
 
-        <div class="holo-card" onclick="openModal('letter')">
-            <div class="card-icon"><i class="fa-solid fa-envelope-open"></i></div>
-            <div>
-                <div class="card-title">The Vow</div>
-                <div class="card-desc">My message</div>
+            <div class="holo-card" onclick="openModal('openwhen')">
+                <div class="card-icon"><i class="fa-solid fa-envelope"></i></div>
+                <div>
+                    <div class="card-title">Open When...</div>
+                    <div class="card-desc">Letters for you</div>
+                </div>
             </div>
-        </div>
 
-        <div class="holo-card" onclick="toggleMusic()">
-            <div class="card-icon" id="music-icon"><i class="fa-solid fa-play"></i></div>
-            <div>
-                <div class="card-title">Favourite Song</div>
-                <div class="card-desc" id="music-text">Click to Play</div>
+            <div class="holo-card" onclick="openModal('petals')">
+                <div class="card-icon"><i class="fa-solid fa-spa"></i></div>
+                <div>
+                    <div class="card-title">Pluck a Petal</div>
+                    <div class="card-desc">Mahal ba niya ako?</div>
+                </div>
             </div>
-        </div>
 
-        <!-- CLICKABLE STREAK CARD -->
-        <div class="holo-card" onclick="openStreakMode()">
-            <div class="card-icon"><i class="fa-solid fa-fire"></i></div>
-            <div>
-                <div class="card-title">Our Streak</div>
-                <div class="timeline-text" id="timer">Loading...</div>
+            <div class="holo-card" onclick="openModal('meter')">
+                <div class="card-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                <div>
+                    <div class="card-title">Love Meter</div>
+                    <div class="card-desc">Hold to find out</div>
+                </div>
             </div>
-        </div>
 
-        <div class="holo-card" onclick="triggerSuperHug()">
-            <div class="card-icon"><i class="fa-solid fa-hands-holding-circle"></i></div>
-            <div>
-                <div class="card-title">Big Hug</div>
-                <div class="card-desc"> Click Me!  <p> Hug kita virtually </p> </div>
+            <div class="holo-card" onclick="openModal('dreams')">
+                <div class="card-icon"><i class="fa-solid fa-list-check"></i></div>
+                <div>
+                    <div class="card-title">Our Dreams</div>
+                    <div class="card-desc">Someday, together</div>
+                </div>
+            </div>
+
+            <div class="holo-card" onclick="makeWish()">
+                <div class="card-icon"><i class="fa-solid fa-meteor"></i></div>
+                <div>
+                    <div class="card-title">Make a Wish</div>
+                    <div class="card-desc">Catch a shooting star</div>
+                </div>
             </div>
         </div>
 
@@ -324,335 +498,932 @@
 </div>
 
 <!-- MODALS -->
-<div class="modal-overlay" id="modal-overlay">
-    
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeAllModals()">
+
     <div class="modal-content" id="modal-daily" style="display:none;">
         <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
-        <h3 style="font-family:'Dancing Script'; color:var(--primary); font-size:2.5rem; margin-bottom:15px;">My Thought</h3>
-        <hr style="border: 0; height: 1px; background: rgba(255,255,255,0.1); margin-bottom: 20px;">
+        <h3>My Thought</h3>
+        <hr class="soft">
         <p id="typewriter-text" style="font-size:1.1rem; line-height:1.6; color:#e0e0e0; min-height:60px;"></p>
+        <div class="note-nav">
+            <button class="note-btn" onclick="prevNote()" title="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="note-counter" id="note-counter"></span>
+            <button class="note-btn" onclick="nextNote()" title="Next"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
     </div>
 
     <div class="modal-content" id="modal-gallery" style="display:none;">
         <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
-        <h3 style="font-family:'Dancing Script'; color:var(--primary); font-size:2.5rem;">Pretty you</h3>
-        <div class="gallery-grid">
-            <!-- ⚠️ REPLACE IMAGES -->
-            <img src="p1.jpg" class="gallery-item">
-            <img src="p2.jpg" class="gallery-item">
-            <img src="p3.jpg" class="gallery-item">
-            <img src="p4.jpg" class="gallery-item">
-            <img src="p5.jpg" class="gallery-item">
-            <img src="p6.jpg" class="gallery-item">
-            <img src="p7.jpg" class="gallery-item">
-            <img src="p8.jpg" class="gallery-item">
-            <img src="p9.jpg" class="gallery-item">
-            <img src="p10.jpg" class="gallery-item">
-            <img src="p11.jpg" class="gallery-item">
-            <img src="p12.jpg" class="gallery-item">
-            <img src="p13.jpg" class="gallery-item">
-            <img src="p14.jpg" class="gallery-item">
-            <img src="p15.jpg" class="gallery-item">
-            <img src="p18.jpg" class="gallery-item">
-            <img src="p19.jpg" class="gallery-item">
-            <img src="p16.jpg" class="gallery-item">
-            <img src="p17.jpg" class="gallery-item">
-            <img src="p20.jpg" class="gallery-item">
-        </div>
+        <h3>Pretty you</h3>
+        <div class="gallery-grid" id="gallery-grid"></div>
     </div>
 
     <div class="modal-content" id="modal-letter" style="display:none;">
         <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
-        <h3 style="font-family:'Dancing Script'; color:var(--primary); font-size:2.5rem;">My Promise</h3>
-        <div style="margin-top:20px; line-height:1.8; text-align:justify; color:#ddd; height: 250px; overflow-y: auto; padding-right: 10px;">
-            <p>To my lovey,</p>,</p><br>
-            <p>Look around, baby ano nakikita mo? Does it not feel na parang universe love? with the sunflower as the centre? Baby this is how I look at you po. And this is how I will remember you. You're beautiful as how the universe offers its beauty, and your heart is vast as the space equivalent to its constantly expanding. Everything around the world and the universe reminds me of you. Because you are not the world, you are a universe filled with the greatest sunflower and that you deserver every good. I love you!</p><br>
-            <p>The pink sunflower represents our time together. The more days we spend, the bigger and brighter it grows. Just like my love for you. Because you are the first person to make me feel this way, you are an angel in disguise, and I hope every pink sunflowers reminds you of me. Mwuapss. </p><br>
-            <p>I love you to the edge of this universe and back. And hopefully the distance between us will grow closer until I can hold you, and forever that will be. I love you very much.</p>
+        <h3>My Promise</h3>
+        <div id="vow-text" style="margin-top:20px; line-height:1.8; text-align:justify; color:#ddd; max-height: 50vh; overflow-y: auto; padding-right: 10px;"></div>
+    </div>
+
+    <div class="modal-content" id="modal-reasons" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3>Reasons I Love You</h3>
+        <div class="reason-box"><p id="reason-text">Pull a reason, love 💗</p></div>
+        <div class="reason-count" id="reason-count"></div>
+        <button class="soft-btn" style="touch-action:auto;" onclick="pullReason()"><i class="fa-solid fa-heart"></i>&nbsp; Pull a reason</button>
+    </div>
+
+    <div class="modal-content" id="modal-openwhen" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3>Open When...</h3>
+        <div id="ow-list"><p class="muted"></p><div id="ow-buttons"></div></div>
+        <div id="ow-view" style="display:none;">
+            <hr class="soft">
+            <p class="ow-letter" id="ow-text"></p>
+            <button class="soft-btn" style="touch-action:auto;" onclick="closeLetter()"><i class="fa-solid fa-chevron-left"></i>&nbsp; Back</button>
         </div>
+    </div>
+
+    <div class="modal-content" id="modal-petals" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3>Pluck a Petal</h3>
+        <p class="muted">Tap a petal. Alamin natin kung mahal ka niya 🌻</p>
+        <div class="plucker" id="plucker"></div>
+        <div class="pluck-text" id="pluck-text"></div>
+        <button class="soft-btn" style="touch-action:auto;" onclick="resetPetals()"><i class="fa-solid fa-rotate-right"></i>&nbsp; Try again</button>
+    </div>
+
+    <div class="modal-content" id="modal-meter" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3>Love Meter</h3>
+        <p class="muted">Hold the button to see how much I love you</p>
+        <div class="meter"><div class="meter-fill" id="meter-fill"></div></div>
+        <div class="meter-val" id="meter-val">0%</div>
+        <div class="meter-msg" id="meter-msg"></div>
+        <button class="soft-btn" id="meter-btn">Hold me 💗</button>
+    </div>
+
+    <div class="modal-content" id="modal-dreams" style="display:none;">
+        <i class="fa-solid fa-xmark close-btn" onclick="closeAllModals()"></i>
+        <h3>Our Little Dreams</h3>
+        <p class="muted">Tap to check them off, one day at a time</p>
+        <ul class="dream-list" id="dream-list"></ul>
     </div>
 
 </div>
 
+<div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt=""></div>
+
 <script>
-    /* ----------------------------------------------------------------
-       1. HELPER: PROCEDURAL TEXTURE GENERATOR
-    ---------------------------------------------------------------- */
-    function forcePlayAudio() {
-    const audio = document.getElementById('bg-music');
-    audio.volume = 0.5;
+/* ====================================================================
+   ✏️  EDIT EVERYTHING HERE  ✏️
+   All the words, photos, dates and the song live in this one block.
+   Change the text between the quotes. Keep the commas and quotes.
+   If you need an apostrophe inside "double quotes", just type it normally.
+   Use <br> for a line break inside the card descriptions.
+==================================================================== */
+const CONFIG = {
 
-    const playPromise = audio.play();
+    /* ---- basics ---- */
+    pageTitle: "My Universe🌻",
+    startDate: "2022-06-05",          // YYYY-MM-DD  <- your anniversary / start date
+    song: "song.mp3",                 // file name of her favourite song (same folder as this file)
 
-    if (playPromise !== undefined) {
-        playPromise.catch(() => {
-            // fallback: wait for ANY click
-            document.addEventListener('click', () => {
-                audio.play();
-            }, { once: true });
-        });
+    /* ---- photos in the "Pinkitel" gallery (file names, same folder) ---- */
+    photos: [
+        "p1.jpg", "p2.jpg", "p3.jpg", "p4.jpg", "p5.jpg",
+        "p6.jpg", "p7.jpg", "p8.jpg", "p9.jpg", "p10.jpg",
+        "p11.jpg", "p12.jpg", "p13.jpg", "p14.jpg", "p15.jpg",
+        "p16.jpg", "p17.jpg", "p18.jpg", "p19.jpg", "p20.jpg"
+    ],
+
+    /* ---- first screen ---- */
+    intro: {
+        title: "For my lovely pinkitel.",
+        subtitle: "A world built just for you 🌻",
+        hint: "turn your sound on 🔊  ·  tap anywhere to start the music",
+        button: "ENTER UNIVERSE"
+    },
+
+    /* ---- text at the top of the main screen ---- */
+    hero: {
+        title: "Para sa'yo, my pinkitel",
+        subtitle: "every star up here is a reason i love you"
+    },
+
+    /* ---- the 12 cards, in this order: left side top-to-bottom, then right side ---- */
+    cards: [
+        { title: "Love Note",      desc: "Open me<br>PS: Ulit ulitin mo" },
+        { title: "Pinkitel",       desc: "Collections" },
+        { title: "The Vow",        desc: "My message" },
+        { title: "Favourite Song" },                       // its description is set in text.musicPlay etc. below
+        { title: "Our Streak" },                           // shows the day counter automatically
+        { title: "Big Hug",        desc: "Click Me!<br>Hug kita virtually" },
+        { title: "Reasons",        desc: "Why I love you" },
+        { title: "Open When...",   desc: "Letters for you" },
+        { title: "Pluck a Petal",  desc: "Mahal nya ba ako?" },
+        { title: "Love Meter",     desc: "Hold to find out!" },
+        { title: "Our Dreams",     desc: "Someday, together" },
+        { title: "Make a Wish",    desc: "Catch a shooting star" }
+    ],
+
+    /* ---- titles of the pop-up windows ---- */
+    modals: {
+        daily: "My Thought",
+        gallery: "Pretty you",
+        letter: "My Promise",
+        reasons: "Reasons I Love You",
+        openwhen: "Open When...",
+        petals: "Pluck a Petal",
+        meter: "Love Meter",
+        dreams: "Our Little Dreams"
+    },
+
+    /* ---- LOVE NOTES (the card with the arrows). Add as many as you want. ---- */
+    notes: [
+        "Hiii loveyyy, ang ganda ganda mooo at mahal na mahal kitaa.",
+        "Things haven't been going well for us lately, but remember na I love you.",
+        "I hope I can be your last and forever!",
+        "Miss na miss kita today, kahit wala naman reason.",
+        "Uy, ikaw nanaman iniisip ko hehe.",
+        "Ang cute mo sobra, di ko kinakaya minsan. gigil me",
+        "Parang gusto lang kita kausapin buong araw.",
+        "Ikaw talaga pahinga ko no joke.",
+        "Random thought: mahal kita.",
+        "Di ko alam bakit pero lagi kitang nami-miss.",
+        "Ikaw yung tipo na gusto ko lang samahan kahit wala tayong ginagawa.",
+        "Hii lovey, kumain ka na ba? take care ka ha.",
+        "Grabe ka, ang ganda mo talaga.",
+        "Ikaw lang sapat na sakin, promise.",
+        "Minsan napapangiti nalang ako kasi ikaw iniisip ko.",
+        "Parang ang gaan ng lahat pag kausap kita.",
+        "Miss na kita agad kahit kakachat lang natin :)",
+        "Ikaw talaga eh, ginagawa mong soft yung puso ko.",
+        "Gusto lang kita yakapin bigla.",
+        "Ang sarap magmahal pag ikaw.",
+        "Hindi ako magsasawa sayo, legit.",
+        "Pag ikaw kausap ko, nawawala pagod ko.",
+        "Ikaw lang gusto ko kausap minsan.",
+        "Ang cute mo pag naaalala kita ;)",
+        "Hii baby, ingat ka palagi please.",
+        "Di ko kailangan ng iba, ikaw lang okay na.",
+        "Ikaw yung comfort ko kahit chat lang.",
+        "Parang gusto kita i-spoil ng lambing araw araw.",
+        "Miss kita. Yun lang.",
+        "Ikaw lang gusto ko kasama kahit tahimik lang.",
+        "Hindi kita ipagpapalit, kahit kanino.",
+        "Ang saya ko pag nandyan ka.",
+        "Ikaw talaga eh, lagi kang nasa isip ko.",
+        "Kahit busy ako, ikaw pa din naiisip ko.",
+        "Ikaw lang pipiliin ko, kahit paulit ulit.",
+        "Parang kulang araw ko pag di kita nakakausap.",
+        "Ikaw yung ‘safe place’ ko.",
+        "Ang ganda mo talaga, di ako nagsasawa sabihin.",
+        "Baby, wag ka mapagod ha, nandito lang ako.",
+        "Ikaw yung pinaka peaceful na part ng araw ko.",
+        "Gusto ko lang sabihin ulit: mahal kita.",
+        "Kahit simple lang, basta ikaw kasama ko okay na.",
+        "Miss na kita, sobra.",
+        "Ikaw talaga pahinga ko sa lahat.",
+        "Ang swerte ko sayo.",
+        "Ikaw lang, wala nang iba.",
+        "Hii loveyyy, ingat ka lagi ha, mahal kita."
+    ],
+
+    /* ---- THE VOW (each line below is one paragraph) ---- */
+    vow: [
+        "To my lovey,",
+        "Look around, baby ano nakikita mo? Does it not feel na parang universe love? with the sunflower as the centre? Baby this is how I look at you po. And this is how I will remember you. You're beautiful as how the universe offers its beauty, and your heart is vast as the space equivalent to its constantly expanding. Everything around the world and the universe reminds me of you. Because you are not the world, you are a universe filled with the greatest sunflower and that you deserver every good. I love you!",
+        "The pink sunflower represents our time together. The more days we spend, the bigger and brighter it grows. Just like my love for you. Because you are the first person to make me feel this way, you are an angel in disguise, and I hope every pink sunflowers reminds you of me. Mwuapss. ",
+        "I love you to the edge of this universe and back. And hopefully the distance between us will grow closer until I can hold you, and forever that will be. I love you very much."
+    ],
+
+    /* ---- REASONS I LOVE YOU ---- */
+    reasons: [
+        "Kasi ang bait ng puso mo.",
+        "Kasi pag ngumiti ka, gumagaan ang mundo ko.",
+        "Kasi ikaw yung unang nagparamdam sakin ng ganito.",
+        "Kasi ang cute mo kahit hindi mo sinasadya.",
+        "Kasi ang lambing mo kausap.",
+        "Kasi pahinga kita sa pagod ko.",
+        "Kasi ang ganda mo sa labas at lalo na sa loob.",
+        "Kasi ikaw yung safe place ko.",
+        "Kasi nakikinig ka, kahit paulit-ulit ako.",
+        "Kasi napapatawa mo ako kahit di mo alam.",
+        "Kasi kahit malayo, ramdam kita.",
+        "Kasi ikaw lang yung gusto kong unang sabihan pag may good news ako.",
+        "Kasi sayo ko naramdaman kung ano ang peace.",
+        "Kasi ang ganda ng ngiti mo.",
+        "Kasi ikaw ang paborito kong notification.",
+        "Kasi nandiyan ka lagi.",
+        "Kasi ikaw ikaw lang, at yun ang pinakamaganda."
+    ],
+
+    /* ---- OPEN WHEN... letters. "label" is the button, "text" is the letter. ---- */
+    openWhen: [
+        {
+            label: "💭 Open when you miss me",
+            text: "Hii lovey. Kung binubuksan mo 'to, ibig sabihin miss mo na ako, and I miss you too, mas marami pa nga siguro. Wala ba si Imran dyan? tawagin mo sya, wag mo sya hayaang dika kausapin kung nam-miss mo sya, babatukan ko yang tao na yan pag dika inaalagaan!!!"
+        },
+        {
+            label: "🌙 Open when you can't sleep",
+            text: "Hays, gising ka pa rin? and why baby? may iniisip ka nanaman ba about something? at hindi mo masabi sabi? I love you, and please remember that. Everything is all right po at nandito ako, don't worry about anything and just relax po Goodnight, my pinkitel. Dream of us. 🌙"
+        },
+        {
+            label: "🥺 Open when you're sad",
+            text: "Baby, pasensya na kung mabigat ngayon. Hindi mo kailangang maging okay agad. Pwede kang umiyak, pwede kang magpahinga. Pero tandaan mo, ang pinakamadilim na gabi ang may pinakamaraming bituin. Ikaw yung pinakamaliwanag na bituin ko, kahit ngayon. Nandito lang ako, ha. Mahal na mahal kita."
+        },
+        {
+            label: "🥳 Open when you're happy",
+            text: "Yay!! I'm so happy for you, lovey! Sabihin mo sakin lahat, gusto kong marinig lahat lahat sayo. Ang saya mo = ang saya ko hehe. Proud na proud ako sayo, always. Celebrate natin 'toooo. Hug kita nang mahigpit! 🌻"
+        }
+        // want a 5th letter? copy one block above, add a comma after the previous one
+    ],
+
+    /* ---- OUR DREAMS checklist ---- */
+    dreams: [
+        "Holding hands while naglalakad.",
+        "Magkita tayo at yakapin kita nang matagal",
+        "Mag-date sa mamahaling lugar.",
+        "Mag-road trip na ikaw ang bahala sa playlist",
+        "Kumain ng paborito mong food, ako libre sayo",
+        "Manood ng sunset nang magkahawak kamay. (Yes please and when?)",
+        "Magpicture sa photobooth, maraming pose (Pupunuin ko isang bag ng pictures naten.)",
+        "Mag-travel sa lugar na pangarap mo",
+        "Magluto nang sabay (paturo po)",
+        "Tumanda nang magkasama"
+    ],
+
+    /* ---- MAKE A WISH (one is picked at random) ---- */
+    wishes: [
+        "Pumikit ka na ng wish, love 🌠 Hihilingin ko rin na maging masaya ka palagi.",
+        "Nahuli mo na ang falling star! Kahit ano pa 'yang wish mo, sasamahan kita roon. 💫",
+        "Wish granted: I hope we will forever be okay ✨",
+        "Isa lang wish ko, ikaw, at natupad na 🌻"
+    ],
+
+    /* ---- all the small messages ---- */
+    text: {
+        streakSub: "Days Growing Together PS: Iloveyou ",
+        clock: ["Days", "Hours", "Min", "Sec"],
+        monthsaryToday: "Happy Monthsary, my love! 🎉🌻",
+        monthsaryNext: "Next monthsary in {n} {days} 💗",   // {n} = number, {days} = day/days
+
+        musicPlay: "Click to Play",
+        musicPlaying: "Playing...",
+        musicPaused: "Paused",
+
+        reasonsStart: "Pull a reason, love 💗",
+        reasonsButton: "Pull a reason",
+        reasonsDone: "  ·  at marami pa 'yan 💗",
+
+        openWhenIntro: "Pili ka lang ng envelope, love 💌",
+        openWhenBack: "Back",
+
+        petalsIntro: "Tap a petal. Alamin natin kung mahal ka niya 🌻",
+        petalsYes: "Mahal niya ako 💗",
+        petalsNo: "Hindi... 🥺",
+        petalsFinal: "Mahal na mahal ka niya. Always has, always will. 🌻💗",
+        petalsButton: "Try again",
+
+        meterIntro: "Hold the button to see how much I love you",
+        meterButton: "Hold me 💗",
+        meter: ["Konti pa lang 'yan...", "Halfway pa lang, ha", "Konti na lang, malapit na..."],
+        meterInfinity: "Walang katapusan, love. Hindi kasya sa meter 💗",
+
+        dreamsIntro: "Tap to check them off, one day at a time"
     }
-}
-    
+};
+</script>
+<script>
+    /* ================================================================
+       0. SMALL HELPERS
+    ================================================================ */
+    const isMobile = () => window.innerWidth < 900;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const gauss = () => (Math.random() + Math.random() + Math.random() + Math.random() + Math.random() + Math.random() - 3) * 1.41;
+
+    function forcePlayAudio() {
+        const audio = document.getElementById('bg-music');
+        audio.volume = 0.5;
+        const p = audio.play();
+        if (p !== undefined) {
+            p.catch(() => { document.addEventListener('click', () => audio.play().catch(() => {}), { once: true }); });
+        }
+    }
+
     function createGlowTexture(color) {
         const canvas = document.createElement('canvas');
         canvas.width = 64; canvas.height = 64;
         const ctx = canvas.getContext('2d');
-        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gradient.addColorStop(0, 'rgba(255,255,255,1)');
-        gradient.addColorStop(0.4, color); 
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 64, 64);
+        const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        g.addColorStop(0, 'rgba(255,255,255,1)');
+        g.addColorStop(0.4, color);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
         return new THREE.CanvasTexture(canvas);
     }
 
-    /* ----------------------------------------------------------------
-       2. THREE.JS SETUP
-    ---------------------------------------------------------------- */
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020005, 0.0008);
+    function softBlob(rgb, a) {
+        const c = document.createElement('canvas');
+        c.width = c.height = 256;
+        const x = c.getContext('2d');
+        const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+        g.addColorStop(0, `rgba(${rgb},${a})`);
+        g.addColorStop(0.45, `rgba(${rgb},${a * 0.35})`);
+        g.addColorStop(1, `rgba(${rgb},0)`);
+        x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+        return new THREE.CanvasTexture(c);
+    }
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4000);
-    camera.position.set(0, 30, 400);
+    function raysTex() {
+        const c = document.createElement('canvas');
+        c.width = c.height = 512;
+        const ctx = c.getContext('2d');
+        ctx.translate(256, 256);
+        for (let k = 0; k < 40; k++) {
+            ctx.save();
+            ctx.rotate(k / 40 * Math.PI * 2 + Math.random() * 0.05);
+            const L = 130 + Math.random() * 126, wd = 0.02 + Math.random() * 0.045;
+            const g = ctx.createRadialGradient(0, 0, 30, 0, 0, L);
+            g.addColorStop(0, 'rgba(255,255,255,0.6)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(L * Math.cos(-wd), L * Math.sin(-wd));
+            ctx.lineTo(L * Math.cos(wd), L * Math.sin(wd));
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+        }
+        return new THREE.CanvasTexture(c);
+    }
+
+    /* ================================================================
+       1. RENDERER / SCENE / CAMERA
+    ================================================================ */
+    const FLOWER_Z = -450, FLOWER_Y = -10;
+    const FOG_DENSITY = 0.0003;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x020005, FOG_DENSITY);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 8000);
+    camera.position.set(0, 30, 480);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth < 900 ? 1.5 : 2));
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, FLOWER_Y, FLOWER_Z);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 100;
-    controls.maxDistance = 1500;
+    controls.minDistance = 380;
+    controls.maxDistance = 1800;
+    controls.enablePan = false;
 
-    /* ----------------------------------------------------------------
-       3. THE YELLOW SUNFLOWER (Default)
-    ---------------------------------------------------------------- */
-    const sunflowerGroup = new THREE.Group();
-    sunflowerGroup.position.set(0, -20, -500); 
-    sunflowerGroup.rotation.x = 0.3; 
-    scene.add(sunflowerGroup);
-
-    // --- Yellow Flower Logic ---
-    const seedGeo = new THREE.SphereGeometry(2, 8, 8);
-    const seedMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff4500, emissiveIntensity: 0.8, roughness: 0.5 });
-    
-    // Create Seeds
-    function createSeeds(group, colorOuter, colorInner) {
-        const cnt = 500;
-        const phi = Math.PI * (3 - Math.sqrt(5));
-        for (let i = 0; i < cnt; i++) {
-            const y = 1 - (i / (cnt - 1)) * 2;
-            const radius = Math.sqrt(1 - y * y);
-            const theta = phi * i;
-            
-            // Disc distribution
-            const r = 70 * Math.sqrt(i/cnt);
-            const x = r * Math.cos(theta);
-            const z = r * Math.sin(theta);
-            
-            const seed = new THREE.Mesh(seedGeo, seedMat.clone());
-            seed.position.set(x, z, (Math.random()-0.5)*5); // Z is depth in this rotation
-            if(i<150) seed.material.emissive.setHex(colorInner); // Inner
-            else seed.material.emissive.setHex(colorOuter); // Outer
-            group.add(seed);
+    function portrait() { return window.innerHeight >= window.innerWidth; }
+    function homeCam() {
+        const w = window.innerWidth, h = window.innerHeight;
+        if (w < 900) {
+            if (portrait()) return { y: 40, z: FLOWER_Z + Math.max(558 / (w / h), 974) };
+            return { y: 20, z: FLOWER_Z + 820 };
         }
+        if (w < 1250) return { y: 30, z: 360 };
+        return { y: 30, z: 250 };
     }
-    createSeeds(sunflowerGroup, 0xff4500, 0x8b0000);
-
-    // --- Petal Creator ---
-    const createPetalGeo = (w, l) => {
-        const shape = new THREE.Shape();
-        shape.moveTo(0, 0);
-        shape.bezierCurveTo(w, l/3, w, l*0.8, 0, l);
-        shape.bezierCurveTo(-w, l*0.8, -w, l/3, 0, 0);
-        return new THREE.ShapeGeometry(shape, 8);
-    };
-
-    const petalMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xffd700, emissive: 0xffa500, emissiveIntensity: 0.2, 
-        metalness: 0.1, roughness: 0.3, transparent: true, opacity: 0.9, side: THREE.DoubleSide
-    });
-
-    const petalLayers = [];
-    function addLayer(group, count, rad, len, wid, zOffset, col, mat) {
-        const geo = createPetalGeo(wid, len);
-        const layer = new THREE.Group();
-        for(let i=0; i<count; i++) {
-            const angle = (i/count)*Math.PI*2;
-            const mesh = new THREE.Mesh(geo, mat.clone());
-            mesh.material.color.setHex(col);
-            mesh.position.set(Math.cos(angle)*rad, Math.sin(angle)*rad, zOffset);
-            mesh.rotation.z = angle - Math.PI/2;
-            mesh.rotation.x = 0.4;
-            mesh.userData = { initialX: 0.4, offset: i, speed: Math.random()*0.5 + 0.5 };
-            layer.add(mesh);
+    function streakCam() {
+        const w = window.innerWidth, h = window.innerHeight;
+        if (w < 900) {
+            if (portrait()) return { y: 20, z: FLOWER_Z + Math.max(589 / (w / h), 1000) };
+            return { y: 10, z: FLOWER_Z + 620 };
         }
-        group.add(layer);
-        return layer;
+        return { y: 10, z: 400 };
     }
 
-    addLayer(sunflowerGroup, 20, 60, 110, 18, -5, 0xffcc00, petalMat).children.forEach(c => petalLayers.push(c));
-    addLayer(sunflowerGroup, 26, 70, 140, 22, -15, 0xffd700, petalMat).children.forEach(c => petalLayers.push(c));
-    addLayer(sunflowerGroup, 32, 80, 170, 25, -25, 0xffaa00, petalMat).children.forEach(c => petalLayers.push(c));
+    // moves the flower around the screen on phones so it never sits under the text or the card dock
+    const viewShift = { x: 0, y: 0.2 };
+    let streakOpen = false;
+    function targetShift() {
+        const w = window.innerWidth, h = window.innerHeight;
+        if (!streakOpen) {
+            if (w < 900 && portrait()) {
+                const dockFrac = h <= 720 ? 0.40 : 0.43;
+                const cy = (74 + h * (1 - dockFrac)) / 2;
+                return { x: 0, y: 0.5 - cy / h };
+            }
+            return { x: 0, y: 0.2 };
+        }
+        if (!portrait()) return { x: -0.25, y: 0 };
+        const cy = (0.07 * h + 240 + h) / 2;
+        return { x: 0, y: 0.5 - cy / h };
+    }
+    function applyViewOffset() {
+        const w = window.innerWidth, h = window.innerHeight;
+        camera.aspect = w / h;
+        if (isMobile()) camera.setViewOffset(w, h, w * viewShift.x, h * viewShift.y, w, h);
+        else camera.clearViewOffset();
+        camera.updateProjectionMatrix();
+    }
+    function moveShift(dur) {
+        const t = targetShift();
+        gsap.to(viewShift, { x: t.x, y: t.y, duration: dur, ease: "power2.inOut", onUpdate: applyViewOffset });
+    }
+    { const t0 = targetShift(); viewShift.x = t0.x; viewShift.y = t0.y; }
+    applyViewOffset();
 
-    const sunLight = new THREE.PointLight(0xffaa00, 2, 800);
-    sunLight.position.set(0, 0, 50);
-    sunflowerGroup.add(sunLight);
+    scene.add(new THREE.HemisphereLight(0xffe2b0, 0x20103a, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xfff0d6, 0.6);
+    dirLight.position.set(-200, 300, 400);
+    scene.add(dirLight);
 
-    /* ----------------------------------------------------------------
-       4. THE PINK STREAK SUNFLOWER (Hidden initially)
-    ---------------------------------------------------------------- */
-    const pinkFlowerGroup = new THREE.Group();
-    pinkFlowerGroup.position.set(0, -20, -500); 
-    pinkFlowerGroup.rotation.x = 0.3; 
-    pinkFlowerGroup.visible = false; // Hidden at start
-    scene.add(pinkFlowerGroup);
+    /* ================================================================
+       2. THE MILKY WAY
+    ================================================================ */
+    const sky = new THREE.Group();
+    scene.add(sky);
 
-    // Pink Seeds (Purple center)
-    const pinkSeedMat = new THREE.MeshStandardMaterial({ color: 0xff1493, emissive: 0x800080, emissiveIntensity: 1, roughness: 0.5 });
-    const pinkSeedGeo = new THREE.SphereGeometry(2, 8, 8);
-    // Reuse seeding logic roughly
-    for(let i=0; i<500; i++) {
-        const r = 70 * Math.sqrt(i/500);
-        const theta = i * 2.4; 
-        const s = new THREE.Mesh(pinkSeedGeo, pinkSeedMat);
-        s.position.set(r*Math.cos(theta), r*Math.sin(theta), (Math.random()-0.5)*5);
-        pinkFlowerGroup.add(s);
+    const nB = new THREE.Vector3(0.45, 0.89, 0).normalize();
+    const uB = new THREE.Vector3(0, 0, -1);
+    const wB = new THREE.Vector3().crossVectors(nB, uB).normalize();
+
+    function bandDir(phi, lat) {
+        const cl = Math.cos(lat);
+        return new THREE.Vector3()
+            .addScaledVector(uB, Math.cos(phi) * cl)
+            .addScaledVector(wB, Math.sin(phi) * cl)
+            .addScaledVector(nB, Math.sin(lat));
+    }
+    function bulgeAt(phi) {
+        const p = ((phi + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+        return Math.exp(-p * p / (2 * 0.75 * 0.75));
     }
 
-    const pinkPetalMat = new THREE.MeshPhysicalMaterial({ 
-        color: 0xff69b4, emissive: 0xff1493, emissiveIntensity: 0.4, 
-        metalness: 0.1, roughness: 0.3, transparent: true, opacity: 0.95, side: THREE.DoubleSide
-    });
+    const sPos = [], sCol = [], sSize = [], sPhase = [];
+    function pushStar(v, R, col, size) {
+        sPos.push(v.x * R, v.y * R, v.z * R);
+        sCol.push(col.r, col.g, col.b);
+        sSize.push(size);
+        sPhase.push(Math.random());
+    }
 
-    const pinkLayers = [];
-    // Pink Layers
-    const l1 = addLayer(pinkFlowerGroup, 20, 60, 110, 18, -5, 0xff69b4, pinkPetalMat); // Hot Pink
-    const l2 = addLayer(pinkFlowerGroup, 26, 70, 140, 22, -15, 0xffb6c1, pinkPetalMat); // Light Pink
-    const l3 = addLayer(pinkFlowerGroup, 32, 80, 170, 25, -25, 0xc71585, pinkPetalMat); // Deep Pink
-
-    // Add them to animation list
-    l1.children.forEach(c => pinkLayers.push(c));
-    l2.children.forEach(c => pinkLayers.push(c));
-    l3.children.forEach(c => pinkLayers.push(c));
-
-    const pinkLight = new THREE.PointLight(0xff1493, 3, 1000);
-    pinkLight.position.set(0, 0, 80);
-    pinkFlowerGroup.add(pinkLight);
-
-
-    /* ----------------------------------------------------------------
-       5. BACKGROUND (Nebula, Planets, Stars)
-    ---------------------------------------------------------------- */
-    const nebulaGroup = new THREE.Group();
-    scene.add(nebulaGroup);
-    const nebulaTexture = createGlowTexture('rgba(255,255,255,0.5)');
-    const nebulaGeo = new THREE.BufferGeometry();
-    const nebulaCount = 60;
-    const nebulaPos = new Float32Array(nebulaCount * 3);
-    const nebulaColors = new Float32Array(nebulaCount * 3);
-    for(let i=0; i<nebulaCount; i++) {
-        nebulaPos[i*3] = (Math.random()-0.5) * 1500;
-        nebulaPos[i*3+1] = (Math.random()-0.5) * 1000;
-        nebulaPos[i*3+2] = -500 - Math.random() * 1000;
+    // scattered background stars
+    const tmpC = new THREE.Color();
+    for (let i = 0; i < 5000; i++) {
+        const v = new THREE.Vector3(gauss(), gauss(), gauss()).normalize();
         const r = Math.random();
-        if(r > 0.6) { nebulaColors[i*3]=1; nebulaColors[i*3+1]=0.4; nebulaColors[i*3+2]=0.7; } 
-        else if(r > 0.3) { nebulaColors[i*3]=0.5; nebulaColors[i*3+1]=0; nebulaColors[i*3+2]=1; } 
-        else { nebulaColors[i*3]=0; nebulaColors[i*3+1]=0.5; nebulaColors[i*3+2]=1; } 
+        if (r < 0.6) tmpC.setRGB(0.8, 0.9, 1.0);
+        else if (r < 0.85) tmpC.setRGB(1, 1, 1);
+        else tmpC.setRGB(1, 0.85, 0.65);
+        tmpC.multiplyScalar(rnd(0.5, 1));
+        let size = 0.9 + Math.pow(Math.random(), 5) * 3.2;
+        if (Math.random() < 0.012) size = rnd(5, 9);
+        pushStar(v, rnd(2200, 2800), tmpC, size);
     }
-    nebulaGeo.setAttribute('position', new THREE.BufferAttribute(nebulaPos, 3));
-    nebulaGeo.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
-    const nebulaMat = new THREE.PointsMaterial({ size: 300, map: nebulaTexture, vertexColors: true, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
-    nebulaGroup.add(new THREE.Points(nebulaGeo, nebulaMat));
 
-    // Dust & Fireflies
-    const orbGeo = new THREE.BufferGeometry();
-    const orbCount = 100;
-    const orbPos = new Float32Array(orbCount*3);
-    const orbVel = [];
-    for(let i=0; i<orbCount; i++) {
-        orbPos[i*3] = (Math.random()-0.5)*600;
-        orbPos[i*3+1] = (Math.random()-0.5)*600;
-        orbPos[i*3+2] = (Math.random()-0.5)*600;
-        orbVel.push({x:(Math.random()-0.5)*0.2, y:(Math.random()-0.5)*0.2, z:(Math.random()-0.5)*0.2});
+    // the milky way band
+    for (let i = 0; i < 24000; i++) {
+        const phi = Math.random() < 0.55 ? gauss() * 0.8 : Math.random() * Math.PI * 2;
+        const b = bulgeAt(phi);
+        const lat = gauss() * (0.06 + 0.1 * b);
+        const v = bandDir(phi, lat);
+        const cool = new THREE.Color(0.75, 0.85, 1.0);
+        const warm = new THREE.Color(1.0, 0.82, 0.6);
+        const c = cool.lerp(warm, b * 0.85);
+        if (Math.random() < 0.06) c.setRGB(1, 0.6, 0.85);
+        c.multiplyScalar(rnd(0.45, 1));
+        let size = 0.7 + Math.pow(Math.random(), 4) * 2.2;
+        if (Math.random() < 0.015) size = rnd(3.5, 6.5);
+        pushStar(v, rnd(2200, 2800), c, size);
     }
-    orbGeo.setAttribute('position', new THREE.BufferAttribute(orbPos, 3));
-    const orbMat = new THREE.PointsMaterial({ size: 5, map: createGlowTexture('rgba(255,215,0,0.8)'), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
-    const orbs = new THREE.Points(orbGeo, orbMat);
-    scene.add(orbs);
 
-    // Heart Explosion
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sPos, 3));
+    starGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(sCol, 3));
+    starGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(sSize, 1));
+    starGeo.setAttribute('aPhase', new THREE.Float32BufferAttribute(sPhase, 1));
+
+    const starMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 }, uPR: { value: renderer.getPixelRatio() } },
+        vertexShader: `
+            attribute float aSize; attribute float aPhase; attribute vec3 aColor;
+            varying vec3 vColor; varying float vTw;
+            uniform float uTime; uniform float uPR;
+            void main() {
+                vColor = aColor;
+                float tw = 0.7 + 0.3 * sin(uTime * (0.8 + aPhase * 0.9) + aPhase * 40.0);
+                vTw = tw;
+                gl_PointSize = aSize * uPR * (0.85 + 0.3 * tw) * 1.6;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }`,
+        fragmentShader: `
+            varying vec3 vColor; varying float vTw;
+            void main() {
+                float d = length(gl_PointCoord - vec2(0.5));
+                if (d > 0.5) discard;
+                float a = pow(1.0 - d * 2.0, 1.7);
+                gl_FragColor = vec4(vColor * (0.9 + 0.5 * vTw), a);
+            }`,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    const stars = new THREE.Points(starGeo, starMat);
+    stars.frustumCulled = false;
+    stars.renderOrder = -3;
+    sky.add(stars);
+
+    // nebula clouds along the band
+    const nebTex = ['255,110,180', '150,90,255', '70,120,255', '255,170,90', '255,220,170'].map(c => softBlob(c, 0.9));
+    for (let i = 0; i < 90; i++) {
+        const phi = Math.random() < 0.6 ? gauss() * 0.9 : Math.random() * Math.PI * 2;
+        const b = bulgeAt(phi);
+        const v = bandDir(phi, gauss() * 0.09);
+        const pool = b > 0.5 ? [3, 4, 0, 1, 3] : [1, 2, 0, 2];
+        const idx = pool[Math.floor(Math.random() * pool.length)];
+        const m = new THREE.SpriteMaterial({ map: nebTex[idx], transparent: true, opacity: rnd(0.05, 0.15), blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        const s = new THREE.Sprite(m);
+        s.position.copy(v).multiplyScalar(2500);
+        const sc = rnd(500, 1400);
+        s.scale.set(sc, sc, 1);
+        s.renderOrder = -2;
+        sky.add(s);
+    }
+    // galactic core glow
+    [[ '255,200,130', 0.22, 1700 ], [ '255,120,190', 0.14, 2400 ]].forEach(([c, o, sc]) => {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: softBlob(c, 0.9), transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+        s.position.copy(uB).multiplyScalar(2550);
+        s.scale.set(sc, sc * 0.7, 1);
+        s.renderOrder = -2;
+        sky.add(s);
+    });
+    // dark dust lanes
+    const dustTex = softBlob('0,0,0', 0.9);
+    for (let i = 0; i < 28; i++) {
+        const v = bandDir(gauss() * 0.9, gauss() * 0.025);
+        const m = new THREE.SpriteMaterial({ map: dustTex, transparent: true, opacity: rnd(0.2, 0.4), depthWrite: false, fog: false });
+        const s = new THREE.Sprite(m);
+        s.position.copy(v).multiplyScalar(2450);
+        const sc = rnd(260, 780);
+        s.scale.set(sc, sc * rnd(0.4, 0.8), 1);
+        s.material.rotation = rnd(0, Math.PI);
+        s.renderOrder = -1;
+        sky.add(s);
+    }
+
+    /* ---------- shooting stars ---------- */
+    const ssTex = (() => {
+        const c = document.createElement('canvas');
+        c.width = 256; c.height = 16;
+        const x = c.getContext('2d');
+        const g = x.createLinearGradient(0, 0, 256, 0);
+        g.addColorStop(0, 'rgba(255,255,255,0)');
+        g.addColorStop(0.7, 'rgba(255,190,230,0.45)');
+        g.addColorStop(1, 'rgba(255,255,255,1)');
+        x.shadowColor = 'rgba(255,200,240,1)'; x.shadowBlur = 8;
+        x.fillStyle = g; x.fillRect(0, 6, 252, 4);
+        return new THREE.CanvasTexture(c);
+    })();
+    const ssGeo = new THREE.PlaneGeometry(1, 1);
+    const shooters = [];
+    function spawnShootingStar(big) {
+        camera.updateMatrixWorld();
+        const f = new THREE.Vector3(); camera.getWorldDirection(f);
+        const r = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+        const u = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+        const left = Math.random() < 0.5;
+        const ang = (left ? Math.PI + 0.55 : -0.55) + rnd(-0.18, 0.18);
+        const pos = camera.position.clone()
+            .addScaledVector(f, 1200)
+            .addScaledVector(r, (left ? 1 : -1) * rnd(300, 800))
+            .addScaledVector(u, rnd(250, 650));
+        const speed = big ? 1500 : 1900;
+        const vel = r.clone().multiplyScalar(Math.cos(ang) * speed).addScaledVector(u, Math.sin(ang) * speed);
+        const mat = new THREE.MeshBasicMaterial({ map: ssTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+        const m = new THREE.Mesh(ssGeo, mat);
+        m.scale.set(big ? 560 : 320, big ? 9 : 5, 1);
+        m.position.copy(pos);
+        scene.add(m);
+        shooters.push({ m, vel, life: 0, max: big ? 1.3 : 0.9, qRot: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), ang) });
+    }
+    let nextShoot = 2.5;
+
+    /* ================================================================
+       3. HEARTS (used by hugs + pink flower)
+    ================================================================ */
     const heartGroup = new THREE.Group();
     scene.add(heartGroup);
     const heartShape = new THREE.Shape();
     heartShape.moveTo(25, 25); heartShape.bezierCurveTo(25, 25, 20, 0, 0, 0); heartShape.bezierCurveTo(-30, 0, -30, 35, -30, 35); heartShape.bezierCurveTo(-30, 55, -10, 77, 25, 95); heartShape.bezierCurveTo(60, 77, 80, 55, 80, 35); heartShape.bezierCurveTo(80, 35, 80, 0, 50, 0); heartShape.bezierCurveTo(35, 0, 25, 25, 25, 25);
     const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 5, bevelEnabled: false });
     heartGeo.center();
-    const heartMeshMat = new THREE.MeshBasicMaterial({ color: 0xff1493 });
+    const heartMats = [0xff1493, 0xff69b4, 0xffb3d9].map(c => new THREE.MeshBasicMaterial({ color: c }));
     let activeHearts = [];
 
     function triggerSuperHug() {
         const overlay = document.getElementById('flash-overlay');
         overlay.style.opacity = 1;
-        setTimeout(()=>overlay.style.opacity=0, 600);
-        gsap.to(camera.position, {y: camera.position.y + 5, duration: 0.1, yoyo: true, repeat: 3});
-        for(let i=0; i<40; i++) {
-            const h = new THREE.Mesh(heartGeo, heartMeshMat);
+        setTimeout(() => overlay.style.opacity = 0, 600);
+        gsap.to(camera.position, { y: camera.position.y + 5, duration: 0.1, yoyo: true, repeat: 3 });
+        for (let i = 0; i < 50; i++) {
+            const h = new THREE.Mesh(heartGeo, heartMats[i % 3]);
             const vec = new THREE.Vector3(0, 0, -50).applyQuaternion(camera.quaternion).add(camera.position);
             h.position.copy(vec);
             h.scale.set(0.05, 0.05, 0.05);
             h.rotation.z = Math.PI;
-            h.userData = { vel: new THREE.Vector3((Math.random()-0.5)*30, (Math.random()-0.5)*30+10, (Math.random()-0.5)*30-20), rot: {x: Math.random()*0.2, y: Math.random()*0.2} };
+            h.userData = { vel: new THREE.Vector3((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30 + 10, (Math.random() - 0.5) * 30 - 20), rot: { x: Math.random() * 0.2, y: Math.random() * 0.2 } };
             heartGroup.add(h); activeHearts.push(h);
         }
     }
 
-    /* ----------------------------------------------------------------
-       6. ANIMATION LOOP
-    ---------------------------------------------------------------- */
+    /* ================================================================
+       4. THE SUNFLOWER BUILDER
+    ================================================================ */
+    const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+
+    const SUN = {
+        petal: { base: 0xd2540a, mid: 0xffae00, tip: 0xffe866 },
+        seed: [0x1c0b04, 0x5a2c0c, 0xb4701c], seedBack: 0x140803,
+        emissive: 0x6a3300, glow: 0xffa733, glowRGB: '255,170,50',
+        pollen: 0xffe08a, light: 0xffb347, rim: 0xff7a2a
+    };
+    const PINK = {
+        petal: { base: 0xb3125f, mid: 0xff4fa3, tip: 0xffc4e6 },
+        seed: [0x16041f, 0x5a145f, 0xd0389d], seedBack: 0x0d0214,
+        emissive: 0x6a0f4a, glow: 0xff4db0, glowRGB: '255,80,175',
+        pollen: 0xffb3e0, light: 0xff6fc0, rim: 0xb04dff
+    };
+
+    function petalGeometry(len, wid, bend, cols) {
+        const SL = 14, SW = 4;
+        const pos = [], col = [], idx = [];
+        const cb = new THREE.Color(cols.base), cm = new THREE.Color(cols.mid), ct = new THREE.Color(cols.tip), tmp = new THREE.Color();
+        for (let i = 0; i <= SL; i++) {
+            const t = i / SL;
+            const w = wid * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.75)), 0.85);
+            for (let j = 0; j <= SW; j++) {
+                const s = j / SW * 2 - 1;
+                const x = s * w, y = t * len;
+                const z = -bend * t * t * len * 0.35 + s * s * w * 0.22;
+                if (t < 0.5) tmp.copy(cb).lerp(cm, t / 0.5); else tmp.copy(cm).lerp(ct, (t - 0.5) / 0.5);
+                const shade = 1 - 0.14 * Math.pow(1 - Math.abs(s), 3) * (t > 0.05 ? 1 : 0);
+                tmp.multiplyScalar(shade * (0.92 + 0.08 * Math.abs(s)));
+                tmp.convertSRGBToLinear();
+                pos.push(x, y, z); col.push(tmp.r, tmp.g, tmp.b);
+            }
+        }
+        for (let i = 0; i < SL; i++) for (let j = 0; j < SW; j++) {
+            const a = i * (SW + 1) + j, b = a + 1, c = a + SW + 1, d = c + 1;
+            idx.push(a, c, b, b, c, d);
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        g.setIndex(idx);
+        g.computeVertexNormals();
+        return g;
+    }
+
+    function buildFlower(P) {
+        const g = new THREE.Group();
+        const petals = [];
+        g.userData = { bloom: 1, petals, P };
+
+        // god rays + halo
+        const raysMat = new THREE.SpriteMaterial({ map: raysTex(), color: P.glow, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        const rays = new THREE.Sprite(raysMat);
+        rays.scale.set(1250, 1250, 1); rays.position.z = -120; g.add(rays);
+
+        const haloMat = new THREE.SpriteMaterial({ map: softBlob(P.glowRGB, 0.85), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        const halo = new THREE.Sprite(haloMat);
+        halo.scale.set(820, 820, 1); halo.position.z = -80; g.add(halo);
+
+        // seed disc (golden-angle phyllotaxis)
+        const R = 64, N = 1500;
+        const back = new THREE.Mesh(new THREE.CircleGeometry(R + 1.5, 48), new THREE.MeshStandardMaterial({ color: P.seedBack, roughness: 1 }));
+        back.position.z = -1.5; g.add(back);
+
+        const seedMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.15, emissive: P.seed[1], emissiveIntensity: 0.35 });
+        const seeds = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 5), seedMat, N);
+        const dummy = new THREE.Object3D();
+        const c0 = new THREE.Color(P.seed[0]), c1 = new THREE.Color(P.seed[1]), c2 = new THREE.Color(P.seed[2]), sc = new THREE.Color();
+        for (let i = 0; i < N; i++) {
+            const t = Math.sqrt((i + 0.5) / N);
+            const r = R * t, th = i * GOLDEN;
+            const size = 1.3 + t * 1.25;
+            dummy.position.set(r * Math.cos(th), r * Math.sin(th), (1 - t * t) * 10 + 1);
+            dummy.rotation.set(0, 0, th);
+            dummy.scale.set(size * 1.2, size * 0.9, size * 0.8);
+            dummy.updateMatrix();
+            seeds.setMatrixAt(i, dummy.matrix);
+            if (t < 0.55) sc.copy(c0).lerp(c1, t / 0.55); else sc.copy(c1).lerp(c2, (t - 0.55) / 0.45);
+            if (Math.random() < 0.05) sc.lerp(new THREE.Color(0xffffff), 0.25);
+            sc.convertSRGBToLinear();
+            seeds.setColorAt(i, sc);
+        }
+        seeds.instanceMatrix.needsUpdate = true;
+        seeds.instanceColor.needsUpdate = true;
+        g.add(seeds);
+
+        // petals, four layers
+        const layers = [
+            { n: 34, r0: 54, len: 196, wid: 31, tilt: 0.00, z: -36, bend: 1.0, mul: 0.82 },
+            { n: 30, r0: 53, len: 172, wid: 29, tilt: 0.10, z: -24, bend: 0.85, mul: 0.9 },
+            { n: 26, r0: 56, len: 146, wid: 26, tilt: 0.22, z: -12, bend: 0.7, mul: 0.98 },
+            { n: 20, r0: 58, len: 116, wid: 22, tilt: 0.38, z: -4, bend: 0.5, mul: 1.06 }
+        ];
+        const petalMatBase = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.6, metalness: 0, emissive: P.emissive, emissiveIntensity: 0.45 });
+        layers.forEach((L, li) => {
+            const geo = petalGeometry(L.len, L.wid, L.bend, P.petal);
+            const off = li * 0.5 * (Math.PI * 2 / L.n);
+            for (let k = 0; k < L.n; k++) {
+                const a = k / L.n * Math.PI * 2 + off + rnd(-0.03, 0.03);
+                const m = new THREE.Mesh(geo, petalMatBase.clone());
+                m.material.color.setScalar(L.mul * rnd(0.94, 1.06));
+                m.rotation.order = 'ZXY';
+                m.position.set(Math.cos(a) * L.r0, Math.sin(a) * L.r0, L.z);
+                m.rotation.z = a - Math.PI / 2;
+                m.rotation.y = rnd(-0.15, 0.15);
+                m.scale.y = rnd(0.93, 1.07);
+                const baseTilt = L.tilt + rnd(-0.04, 0.04);
+                m.rotation.x = baseTilt;
+                g.add(m);
+                petals.push({ mesh: m, baseTilt, layer: li, delay: li * 0.09, phase: Math.random() * 6.28, speed: rnd(0.6, 1.2) });
+            }
+        });
+
+        // pollen sparkles
+        const pc = 160, pp = new Float32Array(pc * 3);
+        for (let i = 0; i < pc; i++) {
+            const rr = rnd(90, 380), aa = Math.random() * Math.PI * 2;
+            pp[i * 3] = Math.cos(aa) * rr; pp[i * 3 + 1] = Math.sin(aa) * rr; pp[i * 3 + 2] = rnd(-60, 90);
+        }
+        const pg = new THREE.BufferGeometry();
+        pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+        const pollen = new THREE.Points(pg, new THREE.PointsMaterial({ size: 7, map: createGlowTexture('rgba(255,255,255,0.35)'), color: P.pollen, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+        g.add(pollen);
+
+        // lights
+        const key = new THREE.PointLight(P.light, 1.6, 1100); key.position.set(0, 0, 170); g.add(key);
+        const rim = new THREE.PointLight(P.rim, 1.1, 800); rim.position.set(0, 120, -140); g.add(rim);
+
+        g.userData.refs = { halo, haloMat, rays, raysMat, pollen, key };
+        g.position.set(0, FLOWER_Y, FLOWER_Z);
+        g.rotation.x = 0.2;
+        return g;
+    }
+
+    function updateFlower(f, t) {
+        const ud = f.userData, b = ud.bloom;
+        for (const p of ud.petals) {
+            let bl = Math.min(1, Math.max(0, (b - p.delay) / 0.72));
+            bl = bl * bl * (3 - 2 * bl);
+            const closed = 1.42 - p.layer * 0.04;
+            const sway = Math.sin(t * p.speed + p.phase) * 0.035 * bl;
+            p.mesh.rotation.x = closed + (p.baseTilt - closed) * bl + sway;
+            const s = 0.4 + 0.6 * bl;
+            p.mesh.scale.x = s; p.mesh.scale.z = s;
+        }
+        const e = b * b * (3 - 2 * b);
+        ud.refs.haloMat.opacity = 0.3 + 0.35 * e + Math.sin(t * 1.3) * 0.04;
+        ud.refs.raysMat.opacity = 0.1 + 0.34 * e;
+        ud.refs.raysMat.rotation = t * 0.03;
+        ud.refs.pollen.rotation.z = t * 0.06;
+        ud.refs.pollen.material.opacity = 0.2 + 0.65 * e;
+    }
+
+    const sunflower = buildFlower(SUN);
+    sunflower.userData.bloom = 0.1;
+    scene.add(sunflower);
+
+    const pinkFlower = buildFlower(PINK);
+    pinkFlower.visible = false;
+    scene.add(pinkFlower);
+
+    // ring of hearts around the pink flower
+    const heartRing = new THREE.Group();
+    pinkFlower.add(heartRing);
+    for (let i = 0; i < 18; i++) {
+        const m = new THREE.Mesh(heartGeo, new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff6ec7 : 0xffc0e0 }));
+        const a = i / 18 * Math.PI * 2;
+        m.position.set(Math.cos(a) * 340, Math.sin(a) * 340, rnd(-40, 40));
+        m.rotation.z = Math.PI;
+        const s = rnd(0.2, 0.3);
+        m.scale.set(s, s, s);
+        m.userData.base = s; m.userData.ph = Math.random() * 6;
+        heartRing.add(m);
+    }
+
+    /* ---------- falling petals + fireflies ---------- */
+    const fallGeos = [
+        petalGeometry(26, 9, 0.6, { base: 0xe08a00, mid: 0xffc400, tip: 0xffee88 }),
+        petalGeometry(26, 9, 0.6, { base: 0xff4fa3, mid: 0xff8cc6, tip: 0xffd6ec })
+    ];
+    const fallMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.6, emissive: 0x552233, emissiveIntensity: 0.4 });
+    const falling = [];
+    for (let i = 0; i < 30; i++) {
+        const m = new THREE.Mesh(fallGeos[i % 2], fallMat);
+        m.position.set(rnd(-450, 450), rnd(-340, 340), rnd(-300, 120));
+        m.rotation.set(rnd(0, 6), rnd(0, 6), rnd(0, 6));
+        m.userData = { vy: rnd(14, 34), sp: new THREE.Vector3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)), ph: Math.random() * 6 };
+        scene.add(m); falling.push(m);
+    }
+
+    const orbCount = 170;
+    const orbGeo = new THREE.BufferGeometry();
+    const orbPos = new Float32Array(orbCount * 3), orbCol = new Float32Array(orbCount * 3), orbVel = [];
+    for (let i = 0; i < orbCount; i++) {
+        orbPos[i * 3] = rnd(-500, 500); orbPos[i * 3 + 1] = rnd(-350, 350); orbPos[i * 3 + 2] = rnd(-550, 150);
+        orbVel.push({ x: rnd(-0.1, 0.1), y: rnd(-0.1, 0.1), z: rnd(-0.1, 0.1) });
+        const pink = Math.random() < 0.35;
+        orbCol[i * 3] = 1; orbCol[i * 3 + 1] = pink ? 0.55 : 0.85; orbCol[i * 3 + 2] = pink ? 0.8 : 0.3;
+    }
+    orbGeo.setAttribute('position', new THREE.BufferAttribute(orbPos, 3));
+    orbGeo.setAttribute('color', new THREE.BufferAttribute(orbCol, 3));
+    const orbs = new THREE.Points(orbGeo, new THREE.PointsMaterial({ size: 7, map: createGlowTexture('rgba(255,255,255,0.8)'), vertexColors: true, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    scene.add(orbs);
+
+    /* ================================================================
+       5. ANIMATION LOOP
+    ================================================================ */
     const clock = new THREE.Clock();
+    let T = 0, entered = false;
+    const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
+    window.addEventListener('pointermove', e => {
+        pointer.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+        pointer.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+    const _q = new THREE.Quaternion();
+
     function animate() {
         requestAnimationFrame(animate);
-        const t = clock.getElapsedTime();
+        const dt = Math.min(clock.getDelta(), 0.05);
+        T += dt;
+        pointer.x += (pointer.tx - pointer.x) * 0.04;
+        pointer.y += (pointer.ty - pointer.y) * 0.04;
 
-        // Animate Yellow Flower
-        sunflowerGroup.rotation.z = Math.sin(t*0.15) * 0.1;
-        sunflowerGroup.rotation.y = Math.sin(t*0.2) * 0.1;
-        petalLayers.forEach(p => { p.rotation.x = p.userData.initialX + Math.sin(t*p.userData.speed + p.userData.offset)*0.15; });
+        starMat.uniforms.uTime.value = T;
+        sky.rotation.y = T * 0.004;
+        sky.rotation.z = Math.sin(T * 0.02) * 0.02;
 
-        // Animate Pink Flower (If Visible)
-        if(pinkFlowerGroup.visible) {
-            pinkFlowerGroup.rotation.z = Math.sin(t*0.2) * 0.1;
-            pinkFlowerGroup.rotation.y = Math.cos(t*0.15) * 0.1;
-            // Pulsing light
-            pinkLight.intensity = 3 + Math.sin(t*3)*1; 
-            pinkLayers.forEach(p => { p.rotation.x = p.userData.initialX + Math.sin(t*p.userData.speed + p.userData.offset)*0.2; });
+        [sunflower, pinkFlower].forEach(f => {
+            if (!f.visible) return;
+            updateFlower(f, T);
+            f.rotation.x = 0.2 + pointer.y * 0.08 + Math.sin(T * 0.2) * 0.03;
+            f.rotation.y = pointer.x * 0.12 + Math.sin(T * 0.17) * 0.05;
+            f.rotation.z = T * 0.035;
+        });
+        if (pinkFlower.visible) {
+            pinkFlower.userData.refs.key.intensity = 1.6 + Math.sin(T * 3) * 0.4;
+            heartRing.rotation.z = -T * 0.15;
+            heartRing.children.forEach(h => {
+                const s = h.userData.base * (1 + Math.sin(T * 2 + h.userData.ph) * 0.18);
+                h.scale.set(s, s, s);
+            });
         }
 
-        // Nebula
-        nebulaGroup.rotation.z = t * 0.02;
+        if (!entered) camera.position.x = Math.sin(T * 0.12) * 40;
 
-        // Orbs
+        // falling petals
+        falling.forEach(m => {
+            const u = m.userData;
+            m.position.y -= u.vy * dt;
+            m.position.x += Math.sin(T * 0.8 + u.ph) * 14 * dt;
+            m.rotation.x += u.sp.x * dt; m.rotation.y += u.sp.y * dt; m.rotation.z += u.sp.z * dt;
+            if (m.position.y < -360) { m.position.y = 360; m.position.x = rnd(-450, 450); }
+        });
+
+        // fireflies
         const oPos = orbs.geometry.attributes.position.array;
-        for(let i=0; i<orbCount; i++) {
-            oPos[i*3] += orbVel[i].x; oPos[i*3+1] += orbVel[i].y; oPos[i*3+2] += orbVel[i].z;
-            if(Math.abs(oPos[i*3])>300) orbVel[i].x *= -1;
-            if(Math.abs(oPos[i*3+1])>300) orbVel[i].y *= -1;
-            if(Math.abs(oPos[i*3+2])>300) orbVel[i].z *= -1;
+        for (let i = 0; i < orbCount; i++) {
+            oPos[i * 3] += orbVel[i].x; oPos[i * 3 + 1] += orbVel[i].y; oPos[i * 3 + 2] += orbVel[i].z;
+            if (Math.abs(oPos[i * 3]) > 500) orbVel[i].x *= -1;
+            if (Math.abs(oPos[i * 3 + 1]) > 350) orbVel[i].y *= -1;
+            if (oPos[i * 3 + 2] > 150 || oPos[i * 3 + 2] < -550) orbVel[i].z *= -1;
         }
         orbs.geometry.attributes.position.needsUpdate = true;
 
-        // Hearts
-        for(let i=activeHearts.length-1; i>=0; i--) {
+        // shooting stars
+        nextShoot -= dt;
+        if (nextShoot <= 0) { spawnShootingStar(false); nextShoot = rnd(3.5, 8); }
+        for (let i = shooters.length - 1; i >= 0; i--) {
+            const s = shooters[i];
+            s.life += dt;
+            s.m.position.addScaledVector(s.vel, dt);
+            s.m.quaternion.copy(camera.quaternion).multiply(s.qRot);
+            const k = s.life / s.max;
+            s.m.material.opacity = Math.sin(Math.min(k, 1) * Math.PI);
+            if (k >= 1) { scene.remove(s.m); s.m.material.dispose(); shooters.splice(i, 1); }
+        }
+
+        // hearts
+        for (let i = activeHearts.length - 1; i >= 0; i--) {
             const h = activeHearts[i];
             h.position.add(h.userData.vel); h.rotation.x += h.userData.rot.x; h.rotation.y += h.userData.rot.y;
             h.userData.vel.y -= 0.3; h.scale.multiplyScalar(0.97);
-            if(h.scale.x < 0.001) { heartGroup.remove(h); activeHearts.splice(i,1); }
+            if (h.scale.x < 0.001) { heartGroup.remove(h); activeHearts.splice(i, 1); }
         }
 
         controls.update();
@@ -660,206 +1431,418 @@
     }
     animate();
 
-    /* ----------------------------------------------------------------
-       7. UI LOGIC & STREAK SYSTEM
-    ---------------------------------------------------------------- */
-    // ⚠️ CHANGE THIS DATE TO YOUR ANNIVERSARY/START DATE
-    const startDate = new Date("2023-01-01"); 
-
+    /* ================================================================
+       6. UI LOGIC, STREAK, MODES
+    ================================================================ */
+    // CHANGE THIS DATE TO YOUR ANNIVERSARY/START DATE
+    const startDate = new Date(CONFIG.startDate);
     let daysTogether = 0;
+    let streakTimer = null;
 
     function startJourney() {
         const audio = document.getElementById('bg-music');
-        if(audio) {
-            audio.volume = 0.5;
-            audio.play().catch(e => console.log("Audio requires interaction"));
-        }
-        
+        if (audio) { audio.volume = 0.5; audio.play().catch(() => console.log("Audio requires interaction")); }
+        entered = true;
+
         gsap.to("#intro", { opacity: 0, duration: 1.5, onComplete: () => {
             document.getElementById('intro').style.display = 'none';
-            // FIX: Make visible, but keep pointerEvents: none in CSS for the container
             const ui = document.getElementById('ui-layer');
             ui.style.visibility = 'visible';
             gsap.to(ui, { opacity: 1, duration: 1 });
-            gsap.to(".dashboard", { y: 0, duration: 1, ease: "back.out(1.2)" });
+            gsap.fromTo(".holo-card", { y: 40, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 0.8, stagger: 0.07, ease: "back.out(1.4)", clearProps: "transform,opacity" });
         }});
-        gsap.to(camera.position, { z: 250, duration: 3, ease: "power2.out" });
 
-        // Calculate Days
-        const now = new Date();
-        const diff = now - startDate;
-        daysTogether = Math.floor(diff/(1000*60*60*24));
+        const h = homeCam();
+        gsap.to(camera.position, { x: 0, y: h.y, z: h.z, duration: 3.5, ease: "power2.inOut" });
+        gsap.to(sunflower.userData, { bloom: 1, duration: 5, delay: 0.4, ease: "power2.out" });
+
+        daysTogether = Math.max(0, Math.floor((new Date() - startDate) / 86400000));
         document.getElementById('timer').innerText = `${daysTogether} Days`;
         document.getElementById('streak-number').innerText = daysTogether;
     }
 
     function toggleMusic() {
         const audio = document.getElementById('bg-music');
-        const icon = document.getElementById('music-icon');
-        const text = document.getElementById('music-text');
-        if(audio.paused) {
-            audio.play(); icon.innerHTML='<i class="fa-solid fa-pause"></i>'; text.innerText="Playing...";
-        } else {
-            audio.pause(); icon.innerHTML='<i class="fa-solid fa-play"></i>'; text.innerText="Paused";
+        if (audio.paused) audio.play().catch(() => {});
+        else audio.pause();
+    }
+
+    /* --- streak clock --- */
+    function nextMonthsary(now) {
+        const d = startDate.getDate();
+        let c = new Date(now.getFullYear(), now.getMonth(), d);
+        if (c <= now) c = new Date(now.getFullYear(), now.getMonth() + 1, d);
+        return c;
+    }
+    function updateStreakClock() {
+        const now = new Date();
+        const diff = Math.max(0, now - startDate);
+        const d = Math.floor(diff / 864e5), h = Math.floor(diff / 36e5) % 24, m = Math.floor(diff / 6e4) % 60, s = Math.floor(diff / 1e3) % 60;
+        document.getElementById('streak-clock').innerHTML = [[CONFIG.text.clock[0], d], [CONFIG.text.clock[1], h], [CONFIG.text.clock[2], m], [CONFIG.text.clock[3], s]]
+            .map(([l, v]) => `<div class="clock-box"><b>${String(v).padStart(2, '0')}</b><span>${l}</span></div>`).join('');
+        const nextEl = document.getElementById('streak-next');
+        if (now.getDate() === startDate.getDate()) nextEl.innerText = CONFIG.text.monthsaryToday;
+        else {
+            const left = Math.ceil((nextMonthsary(now) - now) / 864e5);
+            nextEl.innerText = CONFIG.text.monthsaryNext.replace('{n}', left).replace('{days}', left === 1 ? 'day' : 'days');
         }
     }
 
-    /* --- STREAK MODE LOGIC --- */
     function openStreakMode() {
-        // FIX: Hide normal UI completely so it doesn't block events
-        gsap.to("#ui-layer", { opacity: 0, duration: 0.5, onComplete: () => {
-            document.getElementById('ui-layer').style.visibility = 'hidden';
-        }});
-        
-        // Show Streak Overlay
+        gsap.to("#ui-layer", { opacity: 0, duration: 0.5, onComplete: () => { document.getElementById('ui-layer').style.visibility = 'hidden'; } });
+
+        updateStreakClock();
+        clearInterval(streakTimer);
+        streakTimer = setInterval(updateStreakClock, 1000);
+
         const streak = document.getElementById('streak-overlay');
         streak.style.display = 'block';
         gsap.to(streak, { opacity: 1, delay: 0.5, duration: 0.5 });
 
-        // Switch Flowers
-        gsap.to(sunflowerGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => {
-            sunflowerGroup.visible = false;
-            pinkFlowerGroup.visible = true;
-            
-            // GROW THE PINK FLOWER BASED ON DAYS
-            // Logic: Base size 0.5. Adds size based on days. 
-            // 30 days = size 0.8. 365 days = size 1.5. Max size 2.5.
-            let growthFactor = 0.5 + (daysTogether / 200); 
-            if(growthFactor > 2.5) growthFactor = 2.5;
-
-            pinkFlowerGroup.scale.set(0,0,0);
-            gsap.to(pinkFlowerGroup.scale, { x: growthFactor, y: growthFactor, z: growthFactor, duration: 1.5, ease: "elastic.out(1, 0.5)" });
+        gsap.to(sunflower.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => {
+            sunflower.visible = false;
+            pinkFlower.visible = true;
+            let growth = 0.55 + daysTogether / 330;
+            growth = Math.min(growth, isMobile() ? 0.9 : 1.45);
+            pinkFlower.userData.bloom = 0;
+            pinkFlower.scale.set(0, 0, 0);
+            gsap.to(pinkFlower.scale, { x: growth, y: growth, z: growth, duration: 1.6, ease: "elastic.out(1, 0.5)" });
+            gsap.to(pinkFlower.userData, { bloom: 1, duration: 3.5, ease: "power2.out" });
         }});
-        
-        // Move Camera for dramatic look
-        gsap.to(camera.position, { z: 200, y: 10, duration: 1.5 });
+
+        streakOpen = true; moveShift(1.8);
+        const c = streakCam();
+        gsap.to(camera.position, { y: c.y, z: c.z, duration: 1.8, ease: "power2.inOut" });
     }
 
     function closeStreakMode() {
-        // Hide Streak Overlay
-        gsap.to("#streak-overlay", { opacity: 0, duration: 0.5, onComplete: () => {
-             document.getElementById('streak-overlay').style.display = 'none';
-        }});
-        
-        // Show normal UI
+        clearInterval(streakTimer);
+        gsap.to("#streak-overlay", { opacity: 0, duration: 0.5, onComplete: () => { document.getElementById('streak-overlay').style.display = 'none'; } });
+
         const ui = document.getElementById('ui-layer');
         ui.style.visibility = 'visible';
         gsap.to(ui, { opacity: 1, delay: 0.5, duration: 0.5 });
 
-        // Switch Flowers Back
-        gsap.to(pinkFlowerGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => {
-            pinkFlowerGroup.visible = false;
-            sunflowerGroup.visible = true;
-            gsap.to(sunflowerGroup.scale, { x: 1, y: 1, z: 1, duration: 1, ease: "elastic.out(1, 0.7)" });
+        gsap.to(pinkFlower.scale, { x: 0, y: 0, z: 0, duration: 0.5, onComplete: () => {
+            pinkFlower.visible = false;
+            sunflower.visible = true;
+            sunflower.userData.bloom = 1;
+            gsap.to(sunflower.scale, { x: 1, y: 1, z: 1, duration: 1, ease: "elastic.out(1, 0.7)" });
         }});
 
-        gsap.to(camera.position, { z: 250, y: 30, duration: 1.5 });
+        streakOpen = false; moveShift(1.8);
+        const h = homeCam();
+        gsap.to(camera.position, { y: h.y, z: h.z, duration: 1.8, ease: "power2.inOut" });
     }
 
+    const toggleIcon = document.querySelector('.view-toggle i');
     let uiVisible = true;
     function toggleUI() {
         uiVisible = !uiVisible;
         const ui = document.getElementById('ui-layer');
-        if(uiVisible) {
-            // SHOW UI: Bring back the fog and the interface
+        if (uiVisible) {
             ui.style.visibility = 'visible';
             gsap.to(ui, { opacity: 1, duration: 0.5 });
-            
-            // Smoothly bring back the fog (blur effect)
-            gsap.to(scene.fog, { density: 0.0008, duration: 1 });
-            
-            // Change icon back to open eye
             toggleIcon.className = "fa-solid fa-eye";
         } else {
-           // HIDE UI: Clear the fog so background is sharp
-            gsap.to(ui, { opacity: 0, duration: 0.5, onComplete: () => {
-                ui.style.visibility = 'hidden';
-            }});
-
-            // Smoothly remove the fog (makes stars/nebula sharp)
-            gsap.to(scene.fog, { density: 0, duration: 1 });
-            
-            // Change icon to crossed-out eye
+            gsap.to(ui, { opacity: 0, duration: 0.5, onComplete: () => { ui.style.visibility = 'hidden'; } });
             toggleIcon.className = "fa-solid fa-eye-slash";
         }
     }
 
+    /* ================================================================
+       7. TOAST + WISH
+    ================================================================ */
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        gsap.killTweensOf(t);
+        gsap.fromTo(t, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5 });
+        gsap.to(t, { opacity: 0, delay: 4.2, duration: 0.8 });
+    }
+    const wishes = CONFIG.wishes;
+    function makeWish() {
+        spawnShootingStar(true);
+        setTimeout(() => spawnShootingStar(false), 350);
+        setTimeout(() => spawnShootingStar(false), 700);
+        showToast(wishes[Math.floor(Math.random() * wishes.length)]);
+    }
+
+    /* ================================================================
+       8. MODAL CONTENT
+    ================================================================ */
+    // ---- love notes ----
+    const quotes = CONFIG.notes;
+    let noteIndex = 0;
+    function showNote() {
+        const el = document.getElementById('typewriter-text');
+        el.innerText = quotes[noteIndex];
+        gsap.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.35 });
+        document.getElementById('note-counter').innerText = (noteIndex + 1) + " / " + quotes.length;
+    }
+    function nextNote() { noteIndex = (noteIndex + 1) % quotes.length; showNote(); }
+    function prevNote() { noteIndex = (noteIndex - 1 + quotes.length) % quotes.length; showNote(); }
+
+    // ---- floating hearts inside a modal ----
+    function floatHeart(parent, x, y) {
+        const s = document.createElement('span');
+        s.className = 'rise';
+        s.textContent = ['💗', '💖', '🌻', '✨'][Math.floor(Math.random() * 4)];
+        s.style.left = x + 'px'; s.style.top = y + 'px';
+        parent.appendChild(s);
+        setTimeout(() => s.remove(), 1700);
+    }
+
+    // ---- reasons ----
+    const reasons = CONFIG.reasons;
+    let reasonBag = [], reasonShown = 0;
+    function pullReason() {
+        if (!reasonBag.length) { reasonBag = reasons.map((_, i) => i).sort(() => Math.random() - 0.5); reasonShown = 0; }
+        const i = reasonBag.pop(); reasonShown++;
+        const el = document.getElementById('reason-text');
+        el.innerText = reasons[i];
+        gsap.fromTo(el, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" });
+        document.getElementById('reason-count').innerText = `${reasonShown} / ${reasons.length}` + (reasonShown === reasons.length ? CONFIG.text.reasonsDone : "");
+        const box = document.getElementById('modal-reasons');
+        for (let k = 0; k < 4; k++) floatHeart(box, rnd(80, box.clientWidth - 80), box.clientHeight / 2 + 40);
+    }
+
+    // ---- open when ----
+    const letters = CONFIG.openWhen.map(o => o.text);
+    function openLetter(i) {
+        document.getElementById('ow-list').style.display = 'none';
+        document.getElementById('ow-view').style.display = 'block';
+        const el = document.getElementById('ow-text');
+        el.innerText = letters[i];
+        gsap.fromTo(el, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6 });
+    }
+    function closeLetter() {
+        document.getElementById('ow-view').style.display = 'none';
+        document.getElementById('ow-list').style.display = 'block';
+    }
+
+    // ---- pluck a petal ----
+    const PETAL_N = 21;
+    let petalsLeft = PETAL_N, plucked = 0;
+    function resetPetals() {
+        const box = document.getElementById('plucker');
+        box.innerHTML = '';
+        petalsLeft = PETAL_N; plucked = 0;
+        for (let i = 0; i < PETAL_N; i++) {
+            const d = document.createElement('div');
+            d.className = 'pp';
+            d.dataset.a = (i / PETAL_N * 360).toFixed(2);
+            d.style.transform = `rotate(${d.dataset.a}deg)`;
+            d.onclick = () => pluckPetal(d);
+            box.appendChild(d);
+        }
+        const c = document.createElement('div'); c.className = 'pc'; box.appendChild(c);
+        document.getElementById('pluck-text').innerText = "";
+    }
+    function pluckPetal(d) {
+        if (d.dataset.gone) return;
+        d.dataset.gone = 1; plucked++; petalsLeft--;
+        const a = parseFloat(d.dataset.a);
+        d.style.transform = `rotate(${a + rnd(-30, 30)}deg) translateY(-190px) rotate(${rnd(-120, 120)}deg)`;
+        d.style.opacity = 0;
+        const el = document.getElementById('pluck-text');
+        if (petalsLeft === 0) {
+            el.innerText = CONFIG.text.petalsFinal;
+            const box = document.getElementById('modal-petals');
+            for (let k = 0; k < 6; k++) floatHeart(box, rnd(60, box.clientWidth - 60), box.clientHeight / 2);
+        } else {
+            el.innerText = plucked % 2 === 1 ? CONFIG.text.petalsYes : CONFIG.text.petalsNo;
+        }
+    }
+
+    // ---- love meter ----
+    let meterVal = 0, meterTimer = null, meterInf = false;
+    function updateMeter() {
+        const fill = document.getElementById('meter-fill'), val = document.getElementById('meter-val'), msg = document.getElementById('meter-msg');
+        fill.style.width = Math.min(meterVal, 100) + '%';
+        if (meterInf) { val.innerText = "∞"; msg.innerText = CONFIG.text.meterInfinity; return; }
+        val.innerText = Math.floor(meterVal) + '%';
+        msg.innerText = meterVal < 25 ? "" : meterVal < 50 ? CONFIG.text.meter[0] : meterVal < 75 ? CONFIG.text.meter[1] : meterVal < 100 ? CONFIG.text.meter[2] : "";
+    }
+    function meterStart() {
+        if (meterInf) { meterVal = 0; meterInf = false; }
+        clearInterval(meterTimer);
+        meterTimer = setInterval(() => {
+            meterVal += 0.9;
+            if (meterVal >= 100) { meterInf = true; clearInterval(meterTimer); const b = document.getElementById('modal-meter'); for (let k = 0; k < 8; k++) floatHeart(b, rnd(60, b.clientWidth - 60), b.clientHeight / 2); }
+            updateMeter();
+        }, 30);
+    }
+    function meterStop() {
+        if (meterInf) return;
+        clearInterval(meterTimer);
+        meterTimer = setInterval(() => {
+            meterVal -= 2;
+            if (meterVal <= 0) { meterVal = 0; clearInterval(meterTimer); }
+            updateMeter();
+        }, 30);
+    }
+    function resetMeter() { clearInterval(meterTimer); meterVal = 0; meterInf = false; updateMeter(); }
+    (() => {
+        const b = document.getElementById('meter-btn');
+        ['pointerdown'].forEach(e => b.addEventListener(e, ev => { ev.preventDefault(); meterStart(); }));
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => b.addEventListener(e, meterStop));
+        b.addEventListener('contextmenu', ev => ev.preventDefault());
+    })();
+
+    // ---- dreams ----
+    const dreams = CONFIG.dreams;
+    let dreamState = [];
+    try { dreamState = JSON.parse(localStorage.getItem('universe-dreams') || '[]'); } catch (e) { dreamState = []; }
+    function buildDreams() {
+        const ul = document.getElementById('dream-list');
+        ul.innerHTML = '';
+        dreams.forEach((t, i) => {
+            const li = document.createElement('li');
+            if (dreamState[i]) li.className = 'done';
+            li.innerHTML = `<div class="box"><i class="fa-solid fa-check"></i></div><span>${t}</span>`;
+            li.onclick = () => {
+                dreamState[i] = !dreamState[i];
+                li.classList.toggle('done', !!dreamState[i]);
+                try { localStorage.setItem('universe-dreams', JSON.stringify(dreamState)); } catch (e) {}
+                if (dreamState[i]) { const r = li.getBoundingClientRect(), p = document.getElementById('modal-dreams').getBoundingClientRect(); floatHeart(document.getElementById('modal-dreams'), r.left - p.left + 20, r.top - p.top); }
+            };
+            ul.appendChild(li);
+        });
+    }
+
+    // ---- lightbox ----
+    function openLightbox(src) {
+        const lb = document.getElementById('lightbox');
+        document.getElementById('lightbox-img').src = src;
+        lb.style.display = 'flex';
+        gsap.to(lb, { opacity: 1, duration: 0.3 });
+    }
+    function closeLightbox() {
+        const lb = document.getElementById('lightbox');
+        gsap.to(lb, { opacity: 0, duration: 0.25, onComplete: () => { lb.style.display = 'none'; } });
+    }
+
+    /* ---------- open / close ---------- */
     function openModal(id) {
         document.querySelectorAll('.modal-content').forEach(el => el.style.display = 'none');
-        document.getElementById('modal-'+id).style.display = 'block';
-        
+        document.getElementById('modal-' + id).style.display = 'block';
+
         const overlay = document.getElementById("modal-overlay");
-        // FIX: While modal is open, we WANT it to block clicks
         overlay.style.pointerEvents = "auto";
         gsap.to(overlay, { opacity: 1, duration: 0.3 });
-        gsap.fromTo("#modal-"+id, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 });
-        
-        if(id==='daily') {
-            const quotes = [
-"Hiii loveyyy, ang ganda ganda mooo at mahal na mahal kitaa.",
-"Miss na miss kita today, kahit wala naman reason ",
-"Uy, ikaw nanaman iniisip ko hehe.",
-"Ang cute mo sobra, di ko kinakaya minsan.",
-"Parang gusto lang kita kausapin buong araw.",
-"Ikaw talaga pahinga ko no joke.",
-"Random thought: mahal kita.",
-"Ang saya ko lang kasi ikaw yung sakin.",
-"Di ko alam bakit pero lagi kitang nami-miss.",
-"Ikaw yung tipo na gusto ko lang samahan kahit wala tayong ginagawa.",
-"Hii lovey, kumain ka na ba? take care ka ha.",
-"Grabe ka, ang ganda mo talaga.",
-"Ikaw lang sapat na sakin, promise.",
-"Minsan napapangiti nalang ako kasi ikaw iniisip ko.",
-"Parang ang gaan ng lahat pag kausap kita.",
-"Miss na kita agad kahit kakachat lang natin :)",
-"Ikaw talaga eh, ginagawa mong soft yung puso ko.",
-"Gusto lang kita yakapin bigla.",
-"Ang sarap magmahal pag ikaw.",
-"Ikaw yung pinaka favorite kong tao.",
-"Hindi ako magsasawa sayo, legit.",
-"Pag ikaw kausap ko, nawawala pagod ko.",
-"Ikaw lang gusto ko kausap minsan.",
-"Ang cute mo pag naaalala kita ;)",
-"Hii baby, ingat ka palagi please.",
-"Di ko kailangan ng iba, ikaw lang okay na.",
-"Ikaw yung comfort ko kahit chat lang.",
-"Parang gusto kita i-spoil ng lambing araw araw.",
-"Miss kita. Yun lang.",
-"Ikaw yung reason bakit good mood ako minsan.",
-"Grabe ka, ang lakas mo maka-good vibes.",
-"Ikaw lang gusto ko kasama kahit tahimik lang.",
-"Hindi kita ipagpapalit, kahit kanino.",
-"Ang saya ko pag nandyan ka.",
-"Ikaw talaga eh, lagi kang nasa isip ko.",
-"Kahit busy ako, ikaw pa din naiisip ko.",
-"Ikaw lang pipiliin ko, kahit paulit ulit.",
-"Parang kulang araw ko pag di kita nakakausap.",
-"Ikaw yung ‘safe place’ ko.",
-"Ang ganda mo talaga, di ako nagsasawa sabihin.",
-"Baby, wag ka mapagod ha, nandito lang ako.",
-"Ikaw yung pinaka peaceful na part ng araw ko.",
-"Gusto ko lang sabihin ulit: mahal kita.",
-"Kahit simple lang, basta ikaw kasama ko okay na.",
-"Miss na kita, sobra.",
-"Ikaw talaga pahinga ko sa lahat.",
-"Ang swerte ko sayo.",
-"Ikaw lang, wala nang iba.",
-"Hii loveyyy, ingat ka lagi ha, mahal kita."
-]
-            document.getElementById('typewriter-text').innerText = quotes[Math.floor(Math.random()*quotes.length)];
-        }
+        gsap.fromTo("#modal-" + id, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 });
+
+        if (id === 'daily') { noteIndex = Math.floor(Math.random() * quotes.length); showNote(); }
+        if (id === 'reasons') { reasonBag = []; document.getElementById('reason-text').innerText = CONFIG.text.reasonsStart; document.getElementById('reason-count').innerText = ""; }
+        if (id === 'openwhen') closeLetter();
+        if (id === 'petals') resetPetals();
+        if (id === 'meter') resetMeter();
+        if (id === 'dreams') buildDreams();
     }
     function closeAllModals() {
         const overlay = document.getElementById("modal-overlay");
-        // FIX: Stop blocking immediately so user can rotate while fading out
         overlay.style.pointerEvents = "none";
         gsap.to(overlay, { opacity: 0, duration: 0.3 });
+        clearInterval(meterTimer);
     }
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    window.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeLightbox(); closeAllModals(); }
     });
+
+    let lastPortrait = portrait(), lastMobile = isMobile();
+    window.addEventListener('resize', () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        const t = targetShift(); viewShift.x = t.x; viewShift.y = t.y;
+        applyViewOffset();
+        if (entered && (portrait() !== lastPortrait || isMobile() !== lastMobile)) {
+            const c = streakOpen ? streakCam() : homeCam();
+            gsap.to(camera.position, { y: c.y, z: c.z, duration: 0.8 });
+        }
+        lastPortrait = portrait(); lastMobile = isMobile();
+    });
+
+    /* ================================================================
+       9. APPLY CONFIG TEXT + MUSIC AUTOPLAY
+    ================================================================ */
+    function applyConfig() {
+        const C = CONFIG, $ = q => document.querySelector(q);
+        document.title = C.pageTitle;
+
+        $('.title-main').innerText = C.intro.title;
+        $('.intro-sub').innerText = C.intro.subtitle;
+        $('.intro-hint').innerText = C.intro.hint;
+        $('.enter-btn').innerText = C.intro.button;
+        $('.hero-title h2').innerText = C.hero.title;
+        $('.hero-title p').innerText = C.hero.subtitle;
+        $('.streak-sub').innerText = C.text.streakSub;
+
+        // cards
+        const cards = document.querySelectorAll('.holo-card');
+        C.cards.forEach((c, i) => {
+            const el = cards[i]; if (!el) return;
+            el.querySelector('.card-title').innerText = c.title;
+            const d = el.querySelector('.card-desc');
+            if (d && !d.id && c.desc !== undefined) d.innerHTML = c.desc;
+        });
+
+        // modal titles + small texts
+        Object.keys(C.modals).forEach(k => { const h = $('#modal-' + k + ' h3'); if (h) h.innerText = C.modals[k]; });
+        $('#reason-text').innerText = C.text.reasonsStart;
+        $('#modal-reasons .soft-btn').innerHTML = '<i class="fa-solid fa-heart"></i>&nbsp; ' + C.text.reasonsButton;
+        $('#ow-list > p.muted').innerText = C.text.openWhenIntro;
+        $('#ow-view .soft-btn').innerHTML = '<i class="fa-solid fa-chevron-left"></i>&nbsp; ' + C.text.openWhenBack;
+        $('#modal-petals p.muted').innerText = C.text.petalsIntro;
+        $('#modal-petals .soft-btn').innerHTML = '<i class="fa-solid fa-rotate-right"></i>&nbsp; ' + C.text.petalsButton;
+        $('#modal-meter p.muted').innerText = C.text.meterIntro;
+        $('#meter-btn').innerText = C.text.meterButton;
+        $('#modal-dreams p.muted').innerText = C.text.dreamsIntro;
+
+        // open-when buttons
+        const owb = $('#ow-buttons'); owb.innerHTML = '';
+        C.openWhen.forEach((o, i) => {
+            const b = document.createElement('button');
+            b.className = 'ow-btn'; b.textContent = o.label; b.onclick = () => openLetter(i);
+            owb.appendChild(b);
+        });
+
+        // vow
+        const vow = $('#vow-text'); vow.innerHTML = '';
+        C.vow.forEach(t => {
+            const p = document.createElement('p'); p.textContent = t;
+            vow.appendChild(p); vow.appendChild(document.createElement('br'));
+        });
+
+        // gallery
+        const gg = $('#gallery-grid'); gg.innerHTML = '';
+        C.photos.forEach(f => {
+            const im = document.createElement('img');
+            im.src = f; im.className = 'gallery-item'; im.loading = 'lazy';
+            im.onclick = () => openLightbox(im.src);
+            im.onerror = () => { im.style.display = 'none'; };
+            gg.appendChild(im);
+        });
+
+        // music
+        const audio = $('#bg-music'), icon = $('#music-icon'), text = $('#music-text');
+        audio.src = C.song; audio.load();
+        text.innerText = C.text.musicPlay;
+        audio.addEventListener('play', () => { icon.innerHTML = '<i class="fa-solid fa-pause"></i>'; text.innerText = C.text.musicPlaying; });
+        audio.addEventListener('pause', () => { icon.innerHTML = '<i class="fa-solid fa-play"></i>'; text.innerText = C.text.musicPaused; });
+    }
+
+    // browsers only allow sound after the first tap/click, so: try right away,
+    // and if it is blocked, start the song on the very first tap anywhere.
+    function tryAutoplay() {
+        const audio = document.getElementById('bg-music');
+        audio.volume = 0.5;
+        const evs = ['pointerup', 'click', 'touchend', 'keydown'];
+        const start = () => audio.play().then(() => evs.forEach(e => window.removeEventListener(e, start))).catch(() => {});
+        audio.play().catch(() => evs.forEach(e => window.addEventListener(e, start)));
+    }
+
+    applyConfig();
+    tryAutoplay();
 </script>
 </body>
 </html>
